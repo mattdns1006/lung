@@ -1,0 +1,60 @@
+This is BibTeX, Version 0.99d (TeX Live 2013/Debian)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: main.aux
+The style file: abbrv.bst
+Database file #1: mybib.bib
+Repeated entry---line 367 of file mybib.bib
+ : @inproceedings{taigman2014deepface
+ :                                   ,
+I'm skipping whatever remains of this entry
+I was expecting an "="---line 577 of file mybib.bib
+ :   
+ :   author={Auer, Peter and Burgsteiner, Harald and Maass, Wolfgang},
+(Error may have been on previous line)
+I'm skipping whatever remains of this entry
+Warning--I didn't find a database entry for "2015imagenet"
+Warning--empty journal in ramaswamypulmonary
+Warning--empty year in ramaswamypulmonary
+Warning--empty journal in acs
+You've used 10 entries,
+            2118 wiz_defined-function locations,
+            551 strings with 5666 characters,
+and the built_in function-call counts, 3705 in all, are:
+= -- 356
+> -- 203
+< -- 2
++ -- 80
+- -- 70
+* -- 256
+:= -- 619
+add.period$ -- 30
+call.type$ -- 10
+change.case$ -- 66
+chr.to.int$ -- 0
+cite$ -- 13
+duplicate$ -- 138
+empty$ -- 264
+format.name$ -- 70
+if$ -- 766
+int.to.chr$ -- 0
+int.to.str$ -- 10
+missing$ -- 9
+newline$ -- 52
+num.names$ -- 20
+pop$ -- 76
+preamble$ -- 1
+purify$ -- 55
+quote$ -- 0
+skip$ -- 104
+stack$ -- 0
+substring$ -- 208
+swap$ -- 36
+text.length$ -- 2
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 40
+warning$ -- 3
+while$ -- 30
+width$ -- 12
+write$ -- 104
+(There were 2 error messages)

@@ -1,0 +1,61 @@
+\begin{thebibliography}{10}
+
+\bibitem{anirudh2016lung}
+R.~Anirudh, J.~J. Thiagarajan, T.~Bremer, and H.~Kim.
+\newblock Lung nodule detection using 3d convolutional neural networks trained
+  on weakly labeled data.
+\newblock In {\em SPIE Medical Imaging}, pages 978532--978532. International
+  Society for Optics and Photonics, 2016.
+
+\bibitem{bush2016lung}
+I.~Bush.
+\newblock Lung nodule detection and classification.
+\newblock Technical report, Technical report, Stanford Computer Science, 2016.
+
+\bibitem{dimililer2017tumor}
+K.~Dimililer, Y.~Kirsal-Ever, and B.~Ugur.
+\newblock Tumor detection on ct lung images using image enhancement.
+\newblock In {\em International Science and Technology Conference (ISTEC
+  2016)}, 2017.
+
+\bibitem{dou2016multi}
+Q.~Dou, H.~Chen, L.~Yu, J.~Qin, and P.~A. Heng.
+\newblock Multi-level contextual 3d cnns for false positive reduction in
+  pulmonary nodule detection.
+\newblock {\em IEEE Transactions on Biomedical Engineering}, 2016.
+
+\bibitem{ramaswamypulmonary}
+S.~Ramaswamy and K.~Truong.
+\newblock Pulmonary nodule classification with convolutional neural networks.
+
+\bibitem{setio2015automatic}
+A.~A. Setio, C.~Jacobs, J.~Gelderblom, and B.~van Ginneken.
+\newblock Automatic detection of large pulmonary solid nodules in thoracic ct
+  images.
+\newblock {\em Medical physics}, 42(10):5642--5653, 2015.
+
+\bibitem{shin2016deep}
+H.-C. Shin, H.~R. Roth, M.~Gao, L.~Lu, Z.~Xu, I.~Nogues, J.~Yao, D.~Mollura,
+  and R.~M. Summers.
+\newblock Deep convolutional neural networks for computer-aided detection: Cnn
+  architectures, dataset characteristics and transfer learning.
+\newblock {\em IEEE transactions on medical imaging}, 35(5):1285--1298, 2016.
+
+\bibitem{simonyan2014very}
+K.~Simonyan and A.~Zisserman.
+\newblock Very deep convolutional networks for large-scale image recognition.
+\newblock {\em arXiv preprint arXiv:1409.1556}, 2014.
+
+\bibitem{acs}
+A.~C. Society.
+\newblock Key statistics for lung cancer.
+\newblock 2016.
+
+\bibitem{taigman2014deepface}
+Y.~Taigman, M.~Yang, M.~Ranzato, and L.~Wolf.
+\newblock Deepface: Closing the gap to human-level performance in face
+  verification.
+\newblock In {\em Proceedings of the IEEE Conference on Computer Vision and
+  Pattern Recognition}, pages 1701--1708, 2014.
+
+\end{thebibliography}
