@@ -10,8 +10,12 @@ from skimage.segmentation import clear_border
 from skimage import data
 from scipy import ndimage as ndi
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-import dicom
+import dicom,dicom.UID
+from dicom.dataset import Dataset, FileDataset
+import datetime, time
+
 import scipy.misc
 import numpy as np
 import glob
@@ -20,6 +24,31 @@ import SimpleITK as sitk
 IMAGE_PATHS = glob.glob("/home/msmith/luna16/subset*/*.mhd")
 CANDIDATES = pd.read_csv("candidates_V2.csv")
 ANNOTATIONS = pd.read_csv("annotations.csv")
+
+
+def plot_3d(image, threshold=-300):
+    
+    # Position the scan upright, 
+    # so the head of the patient would be at the top facing the camera
+    p = image.transpose(2,1,0)
+    p = p[:,:,::-1]
+    
+    verts, faces = measure.marching_cubes(p, threshold)
+
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Fancy indexing: `verts[faces]` to generate a collection of triangles
+    mesh = Poly3DCollection(verts[faces], alpha=0.1)
+    face_color = [0.5, 0.5, 1]
+    mesh.set_facecolor(face_color)
+    ax.add_collection3d(mesh)
+
+    ax.set_xlim(0, p.shape[0])
+    ax.set_ylim(0, p.shape[1])
+    ax.set_zlim(0, p.shape[2])
+
+    plt.show()
 
 def read_ct_scan(folder_name):
         # Read the slices from the dicom file
@@ -205,7 +234,7 @@ rescaling to 1mm size in all directions. It saved them in the .npz
 format. It also takes the list of nodule locations in that CT Scan as 
 input.
 '''
-def create_nodule_mask(imagePath, cands):
+def rescale(imagePath):
 	#if os.path.isfile(imagePath.replace('original',SAVE_FOLDER_image)) == False:
 	img, origin, spacing = load_itk(imagePath)
 
@@ -218,15 +247,20 @@ def create_nodule_mask(imagePath, cands):
 	
 	#resize image
 	lung_img = scipy.ndimage.interpolation.zoom(img, real_resize)
-        pdb.set_trace()
+        np.save("lung_img",lung_img)
+
+
+def noduleMask(lung_img):
     
-    # Segment the lung structure
+        # Segment the lung structure
 	lung_img = lung_img + 1024
 	lung_mask = segment_lung_from_ct_scan(lung_img)
 	lung_img = lung_img - 1024
+        np.save("lung_mask",lung_mask)
 
 	#create nodule mask
 	nodule_mask = draw_circles(lung_img,cands,origin,new_spacing)
+        pdb.set_trace()
 
 
 	lung_img_512, lung_mask_512, nodule_mask_512 = np.zeros((lung_img.shape[0], 512, 512)), np.zeros((lung_mask.shape[0], 512, 512)), np.zeros((nodule_mask.shape[0], 512, 512))
@@ -244,9 +278,9 @@ def create_nodule_mask(imagePath, cands):
 		nodule_mask_512[z, upper_offset:-lower_offset,upper_offset:-lower_offset] = nodule_mask[z,:,:]
 
     # save images.    
-	np.save(imageName + '_lung_img.npz', lung_img_512)
-	np.save(imageName + '_lung_mask.npz', lung_mask_512)
-	np.save(imageName + '_nodule_mask.npz', nodule_mask_512)
+	np.save('_lung_img.npz', lung_img_512)
+	np.save('_lung_mask.npz', lung_mask_512)
+	np.save('_nodule_mask.npz', nodule_mask_512)
 
 def getAnnotations(imagePath):
     fp = imagePath.split("/")[-1].replace(".mhd","")
@@ -255,10 +289,13 @@ def getAnnotations(imagePath):
         
 if __name__ == "__main__":
     import pdb
-    path = IMAGE_PATHS[0]
-    annotations = getAnnotations(path)
-    #im, x, y = load_itk(path)
-    create_nodule_mask(path,annotations)
+    path = IMAGE_PATHS[3]
+    #rescale(path)
+    img = np.load("lung_img.npy")
+    write_dicom(img,"eg.mhd")
+
+
+    #plot_3d(img)
 
     pdb.set_trace()
     print(len(IMAGE_PATHS))
