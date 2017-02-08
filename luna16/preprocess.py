@@ -247,21 +247,21 @@ def rescale(imagePath):
 	
 	#resize image
 	lung_img = scipy.ndimage.interpolation.zoom(img, real_resize)
-        np.save("lung_img",lung_img)
+        return lung_img
 
 
-def noduleMask(lung_img):
+def segment(lung_img):
     
         # Segment the lung structure
 	lung_img = lung_img + 1024
 	lung_mask = segment_lung_from_ct_scan(lung_img)
 	lung_img = lung_img - 1024
-        np.save("lung_mask",lung_mask)
+        return lung_mask
 
+
+def noduleMask():
 	#create nodule mask
 	nodule_mask = draw_circles(lung_img,cands,origin,new_spacing)
-        pdb.set_trace()
-
 
 	lung_img_512, lung_mask_512, nodule_mask_512 = np.zeros((lung_img.shape[0], 512, 512)), np.zeros((lung_mask.shape[0], 512, 512)), np.zeros((nodule_mask.shape[0], 512, 512))
 
@@ -289,13 +289,12 @@ def getAnnotations(imagePath):
         
 if __name__ == "__main__":
     import pdb
+
     path = IMAGE_PATHS[3]
-    #rescale(path)
-    img = np.load("lung_img.npy")
-    write_dicom(img,"eg.mhd")
-
-
-    #plot_3d(img)
+    img = rescale(path)
+    lungs = segment(img)
+    sitk.WriteImage(sitk.GetImageFromArray(img),"orig.nrrd")
+    sitk.WriteImage(sitk.GetImageFromArray(lungs),"lungs.nrrd")
 
     pdb.set_trace()
     print(len(IMAGE_PATHS))
