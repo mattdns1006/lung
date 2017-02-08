@@ -24,6 +24,7 @@ import SimpleITK as sitk
 IMAGE_PATHS = glob.glob("/home/msmith/luna16/subset*/*.mhd")
 CANDIDATES = pd.read_csv("candidates_V2.csv")
 ANNOTATIONS = pd.read_csv("annotations.csv")
+RESIZE_SPACING = [1]
 
 
 def plot_3d(image, threshold=-300):
@@ -203,6 +204,7 @@ def draw_circles(image,cands,origin,spacing):
 	image_mask = np.zeros(image.shape)
 
 	#run over all the nodules in the lungs
+        nodule_coords = []
 	for ca in cands.values:
 		#get middel x-,y-, and z-worldcoordinate of the nodule
 		radius = np.ceil(ca[4])/2
@@ -213,6 +215,7 @@ def draw_circles(image,cands,origin,spacing):
 
 		#determine voxel coordinate given the worldcoordinate
 		image_coord = world_2_voxel(image_coord,origin,spacing)
+                nodule_coords.append(image_coord)
 
 		#determine the range of the nodule
 		noduleRange = seq(-radius, radius, RESIZE_SPACING[0])
@@ -223,9 +226,10 @@ def draw_circles(image,cands,origin,spacing):
 				for z in noduleRange:
 					coords = world_2_voxel(np.array((coord_z+z,coord_y+y,coord_x+x)),origin,spacing)
 					if (np.linalg.norm(image_coord-coords) * RESIZE_SPACING[0]) < radius:
-						image_mask[np.round(coords[0]),np.round(coords[1]),np.round(coords[2])] = int(1)
-	
-	return image_mask
+						image_mask[int(coords[0]),int(coords[1]),int(coords[2])] = int(1)
+
+        image_mask = image_mask.astype(np.int8)	
+	return image_mask, nodule_coords
 
 '''
 This function takes the path to a '.mhd' file as input and 
@@ -247,40 +251,39 @@ def rescale(imagePath):
 	
 	#resize image
 	lung_img = scipy.ndimage.interpolation.zoom(img, real_resize)
-        return lung_img
-
-
-def segment(lung_img):
+        sitk.WriteImage(sitk.GetImageFromArray(lung_img),"orig.nrrd")
     
         # Segment the lung structure
 	lung_img = lung_img + 1024
 	lung_mask = segment_lung_from_ct_scan(lung_img)
 	lung_img = lung_img - 1024
-        return lung_mask
 
-
-def noduleMask():
 	#create nodule mask
-	nodule_mask = draw_circles(lung_img,cands,origin,new_spacing)
+        annotations = getAnnotations(imagePath)
+	nodule_mask, coords = draw_circles(lung_img,annotations,origin,new_spacing)
 
-	lung_img_512, lung_mask_512, nodule_mask_512 = np.zeros((lung_img.shape[0], 512, 512)), np.zeros((lung_mask.shape[0], 512, 512)), np.zeros((nodule_mask.shape[0], 512, 512))
+        sitk.WriteImage(sitk.GetImageFromArray(lung_mask),"lungs.nrrd")
+        sitk.WriteImage(sitk.GetImageFromArray(nodule_mask),"mask.nrrd")
+        pdb.set_trace()
 
-	original_shape = lung_img.shape	
-	for z in range(lung_img.shape[0]):
-		offset = (512 - original_shape[1])
-		upper_offset = np.round(offset/2)
-		lower_offset = offset - upper_offset
-
-		new_origin = voxel_2_world([-upper_offset,-lower_offset,0],origin,new_spacing)
-
-		lung_img_512[z, upper_offset:-lower_offset,upper_offset:-lower_offset] = lung_img[z,:,:]
-		lung_mask_512[z, upper_offset:-lower_offset,upper_offset:-lower_offset] = lung_mask[z,:,:]
-		nodule_mask_512[z, upper_offset:-lower_offset,upper_offset:-lower_offset] = nodule_mask[z,:,:]
-
-    # save images.    
-	np.save('_lung_img.npz', lung_img_512)
-	np.save('_lung_mask.npz', lung_mask_512)
-	np.save('_nodule_mask.npz', nodule_mask_512)
+#	lung_img_512, lung_mask_512, nodule_mask_512 = np.zeros((lung_img.shape[0], 512, 512)), np.zeros((lung_mask.shape[0], 512, 512)), np.zeros((nodule_mask.shape[0], 512, 512))
+#
+#	original_shape = lung_img.shape	
+#	for z in range(lung_img.shape[0]):
+#		offset = (512 - original_shape[1])
+#		upper_offset = np.round(offset/2)
+#		lower_offset = offset - upper_offset
+#
+#		new_origin = voxel_2_world([-upper_offset,-lower_offset,0],origin,new_spacing)
+#
+#		lung_img_512[z, upper_offset:-lower_offset,upper_offset:-lower_offset] = lung_img[z,:,:]
+#		lung_mask_512[z, upper_offset:-lower_offset,upper_offset:-lower_offset] = lung_mask[z,:,:]
+#		nodule_mask_512[z, upper_offset:-lower_offset,upper_offset:-lower_offset] = nodule_mask[z,:,:]
+#
+#    # save images.    
+#	np.save('_lung_img.npz', lung_img_512)
+#	np.save('_lung_mask.npz', lung_mask_512)
+#	np.save('_nodule_mask.npz', nodule_mask_512)
 
 def getAnnotations(imagePath):
     fp = imagePath.split("/")[-1].replace(".mhd","")
@@ -290,12 +293,9 @@ def getAnnotations(imagePath):
 if __name__ == "__main__":
     import pdb
 
-    path = IMAGE_PATHS[3]
-    img = rescale(path)
-    lungs = segment(img)
-    sitk.WriteImage(sitk.GetImageFromArray(img),"orig.nrrd")
-    sitk.WriteImage(sitk.GetImageFromArray(lungs),"lungs.nrrd")
-
-    pdb.set_trace()
     print(len(IMAGE_PATHS))
+    path = IMAGE_PATHS[19]
+    print(getAnnotations(path))
+    rescale(path)
+
 
