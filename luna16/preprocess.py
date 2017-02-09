@@ -14,17 +14,15 @@ import matplotlib.cm as cm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import dicom,dicom.UID
 from dicom.dataset import Dataset, FileDataset
+from tqdm import tqdm
 import datetime, time
-
 import scipy.misc
-import numpy as np
 import glob
 import SimpleITK as sitk
 
 IMAGE_PATHS = glob.glob("/home/msmith/luna16/subset*/*.mhd")
 CANDIDATES = pd.read_csv("candidates_V2.csv")
 ANNOTATIONS = pd.read_csv("annotations.csv")
-
 
 
 def plot_3d(image, threshold=-300):
@@ -199,13 +197,14 @@ def seq(start, stop, step=1):
 This function is used to create spherical regions in binary masks
 at the given locations and radius.
 '''
-def draw_circles(image,cands,origin,spacing):
+def draw_circles(image,cands,origin,spacing,resize_factor):
 	#make empty matrix, which will be filled with the mask
 	image_mask = np.zeros(image.shape)
 
 	#run over all the nodules in the lungs
         nodule_coords = []
-        RESIZE_SPACING = [1]
+        RESIZE_SPACING = resize_factor
+
 	for ca in cands.values:
 		#get middel x-,y-, and z-worldcoordinate of the nodule
 		radius = np.ceil(ca[4])/2
@@ -226,13 +225,14 @@ def draw_circles(image,cands,origin,spacing):
 			for y in noduleRange:
 				for z in noduleRange:
 					coords = world_2_voxel(np.array((coord_z+z,coord_y+y,coord_x+x)),origin,spacing)
+
 					if (np.linalg.norm(image_coord-coords) * RESIZE_SPACING[0]) < radius:
                                                 coords = np.round(coords).astype(np.uint16)
-                                                print(coords)
 						image_mask[int(coords[0]),int(coords[1]),int(coords[2])] = int(1)
-                pdb.set_trace()
 
         image_mask = image_mask.astype(np.int8)	
+        nodule_coords = pd.DataFrame(nodule_coords)
+        nodule_coords.columns = ["z","y","x"]
 	return image_mask, nodule_coords
 
 '''
@@ -244,7 +244,7 @@ input.
 '''
 def rescale(imagePath):
         fp = imagePath.split("/")[-1].replace(".mhd","")
-        savePath = "data/" + fp + "/"
+        savePath = "preprocessedData/" + fp + "/"
         if not os.path.exists(savePath):    
             os.mkdir(savePath)
 
@@ -253,7 +253,8 @@ def rescale(imagePath):
 
 	#calculate resize factor
 	#resize_factor = spacing / [0.7, 0.7, 0.7]
-	resize_factor = spacing / [1.2, 1.2, 1.2]
+	resize_factor = spacing / [1.5, 1.5, 1.5]
+
 	new_real_shape = img.shape * resize_factor
 	new_shape = np.round(new_real_shape)
 	real_resize = new_shape / img.shape
@@ -271,11 +272,11 @@ def rescale(imagePath):
 
 	#create nodule mask
         annotations = getAnnotations(imagePath)
-	nodule_mask, coords = draw_circles(lung_img,annotations,origin,new_spacing)
+	nodule_mask, coords = draw_circles(lung_img,annotations,origin,new_spacing,resize_factor)
 
         sitk.WriteImage(sitk.GetImageFromArray(lung_mask),savePath+"lungs.nrrd")
         sitk.WriteImage(sitk.GetImageFromArray(nodule_mask),savePath+"mask.nrrd")
-        pdb.set_trace()
+        coords.to_csv(savePath+"coord.csv",index=0)
 
 
 def getAnnotations(imagePath):
@@ -284,20 +285,23 @@ def getAnnotations(imagePath):
     return ANNOTATIONS[loc]
 
 def mkDirs():
-    dirs = ["data/","aug/"]
+    dirs = ["preprocessedData/","aug/"]
     for path in dirs:
         if not os.path.exists(path):
             os.mkdir(path)
         
 if __name__ == "__main__":
     import pdb
-    print(len(IMAGE_PATHS))
-    path = IMAGE_PATHS[19]
-    print(getAnnotations(path))
+    count = 0
     mkDirs()
+    for i in tqdm(xrange(len(IMAGE_PATHS))):
+        path = IMAGE_PATHS[i]
+        nNodules = getAnnotations(path).shape[0]
+        if nNodules > 0:
+            print(nNodules)
+            rescale(path)
 
 
 
-    rescale(path)
 
 
