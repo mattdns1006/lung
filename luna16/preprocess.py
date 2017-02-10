@@ -221,7 +221,7 @@ def draw_circles(imageShape,cands,origin,spacing,resize_factor):
 
 		#determine the range of the nodule
 		#noduleRange = seq(-radius, radius, SPACING[0])
-		noduleRange = np.linspace(-radius, radius, 10)
+		noduleRange = np.linspace(-radius, radius, 20)
 
 		#create the mask
 		for x in noduleRange:
@@ -256,7 +256,6 @@ def rescale(imagePath):
         start = time.time()
 	img, origin, spacing = load_itk(imagePath)
         end = time.time()
-        print("Loading ITK took {0} seconds.".format(end-start))
 
         resize_factor = spacing / [1.0, 1.0, 1.0]
         new_real_shape = img.shape * resize_factor

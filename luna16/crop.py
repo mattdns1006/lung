@@ -3,11 +3,11 @@ import SimpleITK as sitk
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
-import os, pdb, glob,cv2
+import os, pdb, glob,cv2,sys,argparse
 from tqdm import tqdm
 
 def showCrop(crop):
-    cropMiddle = lungsCrop.shape[0]/2
+    cropMiddle = crop.shape[0]/2
     z = y = x = cropMiddle
     zAxis = crop[z]
     yAxis = crop[:,y]
@@ -46,14 +46,13 @@ def show(img,coords):
     ax.add_artist(anno)
     plt.show()
 
-if __name__ == "__main__":
-    showImgs = 0 
+def main(showImgs=0,segmentation=0):
     cropSize = 32 
     patients = glob.glob("preprocessedData/*/orig.nrrd")
     getCoords = lambda row: np.array([row.z,row.y,row.x])
     patients.sort()
-    pdb.set_trace()
     for patient in tqdm(patients):
+        print(patient)
         patientDir = patient.replace("orig.nrrd","")
         csv = pd.read_csv(patient.replace("orig.nrrd","coord.csv"))
         nNodules = csv.shape[0]
@@ -63,7 +62,6 @@ if __name__ == "__main__":
         mask = sitk.GetArrayFromImage(mask)
         dims = lungs.shape
         count = 0
-        pdb.set_trace()
         for nodule in xrange(nNodules):
             noduleCoords = getCoords(csv.ix[nodule])
             noduleCoords = noduleCoords.round().astype(np.int16)
@@ -93,6 +91,13 @@ if __name__ == "__main__":
                 show(lungs,noduleCoords)
                 showCrop(lungsCrop)
                 showCrop(maskCrop)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--show",type=bool,help="show images")
+    args = parser.parse_args()
+    main(args.show)
+
 
 
 
