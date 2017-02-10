@@ -58,7 +58,7 @@ def main(showImgs=0,segmentation=0):
     getCoords = lambda row: np.array([row.z,row.y,row.x])
     patients.sort()
     totalCount = 0
-    for patient in tqdm(patients):
+    for patient in tqdm(patients[:]):
         print(patient)
         patientDir = patient.replace("orig.nrrd","")
         csv = pd.read_csv(patient.replace("orig.nrrd","coord.csv"))
@@ -85,12 +85,11 @@ def main(showImgs=0,segmentation=0):
 
             lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
             maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
-            wpX = patientDir + "aug_x_{0}".format(count)
-            wpY = patientDir + "aug_y_{0}".format(count)
-            np.save(wpX,lungsCrop)
-            np.save(wpY,maskCrop)
+            wpX = patientDir + "aug_x_{0}.bin".format(count)
+            wpY = patientDir + "aug_y_{0}.bin".format(count)
+            lungsCrop.tofile(wpX)
+            maskCrop.tofile(wpY)
             count += 1
-            totalCount += 1
             if saveSitk == True:
                 wpX = patientDir + "aug_x_{0}.nrrd".format(count)
                 wpY = patientDir + "aug_y_{0}.nrrd".format(count)
@@ -115,17 +114,17 @@ def main(showImgs=0,segmentation=0):
             lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
             maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
 
-            wpX = patientDir + "aug_x_{0}".format(count)
-            wpY = patientDir + "aug_y_{0}".format(count)
-            np.save(wpX,lungsCrop)
-            np.save(wpY,maskCrop)
+            wpX = patientDir + "aug_x_{0}.bin".format(count)
+            wpY = patientDir + "aug_y_{0}.bin".format(count)
+            lungsCrop.tofile(wpX)
+            maskCrop.tofile(wpY)
             count += 1
-            totalCount += 1
             if saveSitk == True:
                 wpX = patientDir + "aug_x_{0}.nrrd".format(count)
                 wpY = patientDir + "aug_y_{0}.nrrd".format(count)
                 sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
                 sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
+        totalCount += count
         if totalCount % 100 == 0:
             print("Total count so far = {0}.".format(totalCount))
 
