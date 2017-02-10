@@ -47,10 +47,17 @@ def show(img,coords):
     plt.show()
 
 def main(showImgs=0,segmentation=0):
-    cropSize = 32 
+    def showing():
+        if showImgs == 1:
+            show(lungs,noduleCoords)
+            showCrop(lungsCrop)
+            showCrop(maskCrop)
+    cropSize = 35 
+    saveSitk = 0
     patients = glob.glob("preprocessedData/*/orig.nrrd")
     getCoords = lambda row: np.array([row.z,row.y,row.x])
     patients.sort()
+    totalCount = 0
     for patient in tqdm(patients):
         print(patient)
         patientDir = patient.replace("orig.nrrd","")
@@ -60,7 +67,7 @@ def main(showImgs=0,segmentation=0):
         lungs = sitk.GetArrayFromImage(lungs)
         mask = sitk.ReadImage(patient.replace("orig","mask"))
         mask = sitk.GetArrayFromImage(mask)
-        dims = lungs.shape
+        dims = np.array(lungs.shape)
         count = 0
         for nodule in xrange(nNodules):
             noduleCoords = getCoords(csv.ix[nodule])
@@ -68,29 +75,61 @@ def main(showImgs=0,segmentation=0):
             start = noduleCoords - cropSize
             end = noduleCoords + cropSize
             if np.any(start < 0):
-                print(start,end)
                 where = np.where(start<0)
                 start[where] = 0 
                 end[where] = cropSize * 2
             elif np.any(dims-end < 0):
-                print(start,end)
                 where = np.where(dims-end<0)
                 end[where] = dims[where]
-                start[where] = dims[where] - crop*2
-
+                start[where] = dims[where] - cropSize*2
 
             lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
             maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
-            wpX = patientDir + "x_{0}.nrrd".format(count)
-            wpY = patientDir + "y_{0}.nrrd".format(count)
-            sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
-            sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
+            wpX = patientDir + "aug_x_{0}".format(count)
+            wpY = patientDir + "aug_y_{0}".format(count)
+            np.save(wpX,lungsCrop)
+            np.save(wpY,maskCrop)
             count += 1
+            totalCount += 1
+            if saveSitk == True:
+                wpX = patientDir + "aug_x_{0}.nrrd".format(count)
+                wpY = patientDir + "aug_y_{0}.nrrd".format(count)
+                sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
+                sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
 
-            if showImgs == 1:
-                show(lungs,noduleCoords)
-                showCrop(lungsCrop)
-                showCrop(maskCrop)
+
+        # For every nodule make another file pair with no nodule in it (balanced)
+        minRange = np.array([0,0,0]) + cropSize
+        maxRange = dims - cropSize
+        noNodule = False
+        #showing()
+
+
+        for randomCrop in xrange(nNodules):
+            # Max and min ranges to sample from
+            z, y, x = [np.random.randint(minRange[i],maxRange[i]) for i in [0,1,2]]
+            noduleCoords = np.array([z,y,x])
+
+            start = noduleCoords - cropSize
+            end = noduleCoords + cropSize
+            lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
+            maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
+
+            wpX = patientDir + "aug_x_{0}".format(count)
+            wpY = patientDir + "aug_y_{0}".format(count)
+            np.save(wpX,lungsCrop)
+            np.save(wpY,maskCrop)
+            count += 1
+            totalCount += 1
+            if saveSitk == True:
+                wpX = patientDir + "aug_x_{0}.nrrd".format(count)
+                wpY = patientDir + "aug_y_{0}.nrrd".format(count)
+                sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
+                sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
+        if totalCount % 100 == 0:
+            print("Total count so far = {0}.".format(totalCount))
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
