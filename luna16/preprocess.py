@@ -197,9 +197,11 @@ def seq(start, stop, step=1):
 This function is used to create spherical regions in binary masks
 at the given locations and radius.
 '''
-def draw_circles(image,cands,origin,spacing,resize_factor):
+def draw_circles(imageShape,cands,origin,spacing,resize_factor):
 	#make empty matrix, which will be filled with the mask
-	image_mask = np.zeros(image.shape)
+
+
+	image_mask = np.zeros(imageShape.round().astype(np.uint16))
 
 	#run over all the nodules in the lungs
         nodule_coords = []
@@ -218,15 +220,17 @@ def draw_circles(image,cands,origin,spacing,resize_factor):
                 nodule_coords.append(image_coord)
 
 		#determine the range of the nodule
-		noduleRange = seq(-radius, radius, RESIZE_SPACING[0])
+		#noduleRange = seq(-radius, radius, SPACING[0])
+		noduleRange = np.linspace(-radius, radius, 10)
 
 		#create the mask
 		for x in noduleRange:
 			for y in noduleRange:
 				for z in noduleRange:
-					coords = world_2_voxel(np.array((coord_z+z,coord_y+y,coord_x+x)),origin,spacing)
 
-					if (np.linalg.norm(image_coord-coords) * RESIZE_SPACING[0]) < radius:
+					coords = world_2_voxel(np.array((coord_z+z,coord_y+y,coord_x+x)),origin,spacing)
+                                        distance = np.linalg.norm(image_coord-coords)
+					if distance < radius:
                                                 coords = np.round(coords).astype(np.uint16)
 						image_mask[int(coords[0]),int(coords[1]),int(coords[2])] = int(1)
 
@@ -248,33 +252,47 @@ def rescale(imagePath):
         if not os.path.exists(savePath):    
             os.mkdir(savePath)
 
-	#if os.path.isfile(imagePath.replace('original',SAVE_FOLDER_image)) == False:
+        ##################### LOAD ######################
+        start = time.time()
 	img, origin, spacing = load_itk(imagePath)
+        end = time.time()
+        print("Loading ITK took {0} seconds.".format(end-start))
 
-	#calculate resize factor
-	#resize_factor = spacing / [0.7, 0.7, 0.7]
-	resize_factor = spacing / [1.5, 1.5, 1.5]
-
-	new_real_shape = img.shape * resize_factor
-	new_shape = np.round(new_real_shape)
-	real_resize = new_shape / img.shape
+        resize_factor = spacing / [1.0, 1.0, 1.0]
+        new_real_shape = img.shape * resize_factor
+        new_shape = np.round(new_real_shape)
+        real_resize = new_shape / img.shape
         print("size {0} == > {1}".format(img.shape,new_real_shape))
-	new_spacing = spacing / real_resize
-	
-	#resize image
-	lung_img = scipy.ndimage.interpolation.zoom(img, real_resize)
-        sitk.WriteImage(sitk.GetImageFromArray(lung_img),savePath+"orig.nrrd")
+        new_spacing = spacing / real_resize
+	#calculate resize factor
+
+        ##################### RESIZE ######################
+        def resize():
+            #resize image
+            start = time.time()
+            lung_img = scipy.ndimage.interpolation.zoom(img, real_resize)
+
+            end = time.time()
+            sitk.WriteImage(sitk.GetImageFromArray(lung_img),savePath+"orig.nrrd")
+            print("Resizing took {0} seconds.".format(end-start))
     
         # Segment the lung structure
-	lung_img = lung_img + 1024
-	lung_mask = segment_lung_from_ct_scan(lung_img)
-	lung_img = lung_img - 1024
+        def segment():
+            start = time.time()
+            lung_img = lung_img + 1024
+            lung_mask = segment_lung_from_ct_scan(lung_img)
+            lung_img = lung_img - 1024
+            end = time.time()
+            print("Segmenting took {0} seconds.".format(end-start))
+            sitk.WriteImage(sitk.GetImageFromArray(lung_mask),savePath+"segment.nrrd")
 
-	#create nodule mask
+        ##################### DRAW MASKS ######################
         annotations = getAnnotations(imagePath)
-	nodule_mask, coords = draw_circles(lung_img,annotations,origin,new_spacing,resize_factor)
+        start = time.time()
+	nodule_mask, coords = draw_circles(new_real_shape,annotations,origin,new_spacing,resize_factor)
+        end = time.time()
+        print("Drawing masks took {0} seconds.".format(end-start))
 
-        sitk.WriteImage(sitk.GetImageFromArray(lung_mask),savePath+"lungs.nrrd")
         sitk.WriteImage(sitk.GetImageFromArray(nodule_mask),savePath+"mask.nrrd")
         coords.to_csv(savePath+"coord.csv",index=0)
 
@@ -294,12 +312,14 @@ if __name__ == "__main__":
     import pdb
     count = 0
     mkDirs()
+    IMAGE_PATHS.sort()
     for i in tqdm(xrange(len(IMAGE_PATHS))):
         path = IMAGE_PATHS[i]
         nNodules = getAnnotations(path).shape[0]
         if nNodules > 0:
-            print(nNodules)
+            print(IMAGE_PATHS[i])
             rescale(path)
+            print("\n")
 
 
 

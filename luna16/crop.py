@@ -47,17 +47,23 @@ def show(img,coords):
     plt.show()
 
 if __name__ == "__main__":
+    showImgs = 0 
     cropSize = 32 
-    patients = glob.glob("preprocessedData/*/lungs.nrrd")
+    patients = glob.glob("preprocessedData/*/orig.nrrd")
     getCoords = lambda row: np.array([row.z,row.y,row.x])
-    for patient in patients:
-        csv = pd.read_csv(patient.replace("lungs.nrrd","coord.csv"))
+    patients.sort()
+    pdb.set_trace()
+    for patient in tqdm(patients):
+        patientDir = patient.replace("orig.nrrd","")
+        csv = pd.read_csv(patient.replace("orig.nrrd","coord.csv"))
         nNodules = csv.shape[0]
         lungs = sitk.ReadImage(patient)
         lungs = sitk.GetArrayFromImage(lungs)
-        mask = sitk.ReadImage(patient.replace("lungs","mask"))
+        mask = sitk.ReadImage(patient.replace("orig","mask"))
         mask = sitk.GetArrayFromImage(mask)
         dims = lungs.shape
+        count = 0
+        pdb.set_trace()
         for nodule in xrange(nNodules):
             noduleCoords = getCoords(csv.ix[nodule])
             noduleCoords = noduleCoords.round().astype(np.int16)
@@ -74,12 +80,20 @@ if __name__ == "__main__":
                 end[where] = dims[where]
                 start[where] = dims[where] - crop*2
 
-            pdb.set_trace()
+
             lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
             maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
-            show(lungs,noduleCoords)
-            showCrop(lungsCrop)
-            showCrop(maskCrop)
+            wpX = patientDir + "x_{0}.nrrd".format(count)
+            wpY = patientDir + "y_{0}.nrrd".format(count)
+            sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
+            sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
+            count += 1
+
+            if showImgs == 1:
+                show(lungs,noduleCoords)
+                showCrop(lungsCrop)
+                showCrop(maskCrop)
+
 
 
             
