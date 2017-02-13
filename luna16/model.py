@@ -3,6 +3,7 @@ import numpy as np
 import sys
 sys.path.append("/home/msmith/misc/tfFunctions")
 from batchNorm2 import bn
+from params import *
 
 def imSum(name,img,max_outputs=10):
     tf.summary.image(name,img,max_outputs)
@@ -67,10 +68,10 @@ def model0(x,is_training,initFeats=16,featsInc=0,nDown=6,filterSize=3,decay=0.95
     imSum("x",x)
     bS = get_shape(x)[0]
     af = tf.nn.relu
-    print(x.get_shape())
+    get_shape(x,print_shape=1)
     dilation = 2
     with tf.variable_scope("convIn"):
-        x1 = af(bn(convolution3d(x,1,initFeats,3,stride=2),is_training=is_training,name="bn_0",decay=decay))
+        x1 = af(bn(convolution3d(x,1,initFeats,3,stride=1),is_training=is_training,name="bn_0",decay=decay))
 
     for block in range(nDown):
         if block == 0:
@@ -84,31 +85,37 @@ def model0(x,is_training,initFeats=16,featsInc=0,nDown=6,filterSize=3,decay=0.95
 	    x3 = af(bn(convolution3d(x1,inFeats,outFeats,3,stride=1),is_training=is_training,name="bn_{0}_1".format(nDown),decay=decay))
             x4 = bn(x2+x3,is_training=is_training,name="bn_{0}_3".format(nDown))
 	    x1 = tf.nn.max_pool3d(x4,[1,3,3,3,1],[1,2,2,2,1],"SAME")
-    	    print(x1.get_shape())
+            get_shape(x1,print_shape=1)
 
-    #x1 = convolution3d_transpose(x1,[1,10,10,10,1],outFeats,1,3)
-    #weight = W([filterSize,filterSize,filterSize,1,outFeats],"lecun_uniform")
-    #output_shape = [1,10,10,10,1]
-    #stride = 2
-    #x1 = tf.nn.conv3d_transpose(x1,weight,output_shape,strides=[1,stride,stride,stride,1],padding='SAME') 
-    #print(x1.get_shape())
+    nUp = nDown
+    for block in range(nUp):
+        with tf.variable_scope("block_up_{0}".format(block)):
+            shape = get_shape(x1)
+            bS, depth, height, width, c = shape
+            assert depth==height==width, "Must be doing a cube i.e. h = w = d"
+            upSample = 2
+            depth *= upSample
+            height *= upSample
+            width *= upSample
+            inFeats = outFeats
+            outFeats -= featsInc
+            #if block == nUp - 1:
+            #    depth = IN_SIZE[0] 
+            #    height = IN_SIZE[1] 
+            #    width = IN_SIZE[2] 
+            x1 = convolution3d_transpose(x1,output_shape=[bS,depth,height,width,outFeats],inFeats = inFeats, outFeats = outFeats,filterSize= 3,stride = upSample)
+            get_shape(x1,print_shape=1)
+    with tf.variable_scope("out"):
+        yPred = convolution3d(x1, inFeats = outFeats, outFeats = 1,filterSize= 3,stride =1)
+        get_shape(yPred,print_shape=1)
 
-    shape = get_shape(x1)
-    bS, depth, height, width, c = shape
-    assert depth==height==width, "Must be doing a cube i.e. h = w = d"
-    upSample = 2
-    depth *= upSample
-    height *= upSample
-    width *= upSample
-    inFeats = outFeats
-    pdb.set_trace()
-    x1 = convolution3d_transpose(x1,output_shape=[bS,depth,height,width,1],inFeats = outFeats , outFeats = 1,filterSize= 3,stride = upSample)
-
-    yPred = x1
     return yPred
 
-def get_shape(tensor):
-    return tensor.get_shape().as_list()
+def get_shape(tensor,print_shape=0):
+    shape = tensor.get_shape().as_list()
+    if print_shape == 1:
+        print("Shape = {0}".format(shape))
+    return shape
 
 if __name__ == "__main__":
     import pdb
