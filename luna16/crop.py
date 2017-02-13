@@ -52,7 +52,7 @@ def main(showImgs=0,segmentation=0):
             show(lungs,noduleCoords)
             showCrop(lungsCrop)
             showCrop(maskCrop)
-    cropSize = 35 
+    cropSize = 32 
     saveSitk = 0
     patients = glob.glob("preprocessedData/*/orig.nrrd")
     getCoords = lambda row: np.array([row.z,row.y,row.x])
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--show",type=bool,help="show images")
     args = parser.parse_args()
-    #main(args.show)
+    main(args.show)
     makeCsvs()
 
 

@@ -1,4 +1,4 @@
-import cv2,os,sys, glob
+import cv2,os,sys, glob, pdb
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -10,16 +10,16 @@ sys.path.append("/Users/matt/misc/tfFunctions/")
 import paramCount
 from dice import dice
 from paramCount import paramCount
+from params import *
 
 def varSummary(var,name):
     with tf.name_scope('summary'):
         tf.summary.scalar(name, var)
         tf.summary.histogram(name, var)
 
-def lossFn(y,yPred,regularization=1,beta=0.00094):
+def lossFn(y,yPred,regularization=0,beta=0.00094):
     with tf.variable_scope("loss"):
-        y = tf.argmax(y,1)
-        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y,logits=yPred))
+        loss = tf.reduce_mean(tf.square(tf.sub(y,yPred)))
         regLoss = loss
         if regularization == 1:
             weights = [w for w in tf.trainable_variables() if "/w/" in w.name]
@@ -28,10 +28,6 @@ def lossFn(y,yPred,regularization=1,beta=0.00094):
         varSummary(loss,"loss")
     with tf.variable_scope("regLoss"):
         varSummary(regLoss,"regLoss")
-    with tf.variable_scope("accuracy"):
-        correct = tf.equal(tf.argmax(yPred,1),y)
-        acc = tf.reduce_mean(tf.cast(correct,tf.float32))
-        varSummary(acc,"accuracy")
     return loss, regLoss 
 
 def trainer(lossFn, learningRate):
@@ -73,15 +69,14 @@ if __name__ == "__main__":
     flags = tf.app.flags
     FLAGS = flags.FLAGS 
     flags.DEFINE_float("lr",0.001,"Initial learning rate.")
-    flags.DEFINE_float("feats",4,"Use the 4th feature i.e. mask?.")
     flags.DEFINE_float("lrD",1.00,"Learning rate division rate applied every epoch. (DEFAULT - nothing happens)")
-    flags.DEFINE_integer("inSize",128,"Size of input image")
-    flags.DEFINE_integer("initFeats",64,"Initial number of features.")
-    flags.DEFINE_integer("incFeats",16,"Number of features growing.")
+    flags.DEFINE_integer("inSize",70,"Size of input image")
+    flags.DEFINE_integer("initFeats",16,"Initial number of features.")
+    flags.DEFINE_integer("incFeats",8,"Number of features growing.")
     flags.DEFINE_float("drop",0.943,"Keep prob for dropout.")
     flags.DEFINE_integer("aug",1,"Augment.")
-    flags.DEFINE_integer("nDown",7,"Number of blocks going down.")
-    flags.DEFINE_integer("bS",20,"Batch size.")
+    flags.DEFINE_integer("nDown",4,"Number of blocks going down.")
+    flags.DEFINE_integer("bS",5,"Batch size.")
     flags.DEFINE_integer("load",0,"Load saved model.")
     flags.DEFINE_integer("trainAll",0,"Train on all data.")
     flags.DEFINE_integer("fit",0,"Fit training data.")
@@ -108,7 +103,8 @@ if __name__ == "__main__":
     if FLAGS.test == 1:
         what = ["test"]
         load = 1
-        FLAGS.nEpochs = 1
+        FLAGS.nEpochs = 1 
+        FLAGS.aug = 0
 
     for trTe in what:
         tf.reset_default_graph()
@@ -120,10 +116,10 @@ if __name__ == "__main__":
             incFeats=FLAGS.incFeats,
             nDown=FLAGS.nDown,
             num_epochs=FLAGS.nEpochs,
-            augment = aug
+            augment = FLAGS.aug 
             )
 
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.85)
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.90)
 
         merged = tf.summary.merge_all()
         paramCount()
@@ -153,28 +149,21 @@ if __name__ == "__main__":
                         trWriter.add_summary(summary,trCount)
                         if count % 200 == 0:
                             print("Seen {0} examples".format(count))
-                            x = x[[0],:]
-                            y = y[[0],:].argmax()
-                            yPred = yPred[[0],:].argmax()
-                            showBatch(x,y,yPred,wp="{0}/train.png".format(imgPath))
-                            if FLAGS.show == 1:
-                                pass
 
                         if count % 10000 == 0:
                             print("Saving")
                             saver.save(sess,savePath)
+
                         if count > 120000:
                             print("Finished training cba")
                             break
+
                     elif trTe == "test":
                         summary,x,y,yPred,xPath = sess.run([merged,X,Y,YPred,XPath],feed_dict={is_training:False,drop:FLAGS.drop})
                         teCount += batchSize
                         teWriter.add_summary(summary,teCount)
                         if teCount % 100 == 0:
                             print("Seen {0} examples".format(teCount))
-                            x = x[[0],:]
-                            y = y[[0],:].argmax()
-                            yPred = yPred[[0],:].argmax()
                             #showBatch(x,y,yPred,wp="{0}/test.jpg".format(imgPath))
 
                     elif trTe == "fit":
@@ -184,11 +173,7 @@ if __name__ == "__main__":
                             row = fp[i].tolist() + yPred[i].tolist()
                             df.append(row) 
                         if count % 600 == 0:
-                            print(count)
-                            xeg = x[[0],:]
-                            yeg = "NA" 
-                            yPredeg = decode.get(yPred[[0],:].argmax())
-                            showBatch(xeg,yeg,yPredeg,wp="{0}/fit.jpg".format(imgPath))
+                            print("Seen {0} examples".format(count))
 
                     else:
                         break
@@ -210,7 +195,6 @@ if __name__ == "__main__":
                 saver.save(sess,savePath)
             elif trTe == "fit":
                 Df = pd.DataFrame(df)
-                Df.columns = ["img","c0","c1","c2","c3","c4","c5","c6","c7","c8","c9"]
                 Df["img"] = Df.img.apply(lambda x: x.split("/")[-1])
                 Df.to_csv("submissions/submission_{0}.csv".format(specification),index=0)
                 print("Written submission file.")

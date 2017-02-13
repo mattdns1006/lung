@@ -3,11 +3,11 @@ import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import tensorflow as tf
+from params import *
+import pdb
 
 from crop import showCrop
-IN_SIZE = [70,70,70]
-MIN = -4000.0
-MAX = 10000.0
+
 
 def getImg(path):
     fileReader = tf.WholeFileReader()
@@ -25,19 +25,23 @@ def read(csvPath,batchSize=5,num_epochs=1,shuffle=True,augment=0):
     x = tf.read_file(xPath)
     x = tf.decode_raw(x,tf.int16)
     x = tf.reshape(x,IN_SIZE) 
+    x = tf.expand_dims(x,3)
     x = tf.cast(x,tf.float32)
     x = (tf.sub(x,MIN)/(tf.sub(MAX,MIN)))
 
     y = tf.read_file(yPath)
     y = tf.decode_raw(y,tf.uint8)
     y = tf.reshape(y,IN_SIZE)
+    y = tf.expand_dims(y,3)
     y = tf.cast(y,tf.float32)
 
     xPath = tf.reshape(xPath,[1])
+    in_size = list(IN_SIZE) 
+    in_size += [1]
     #if augment == 1:
     #    x = aug(x,inSize)
 
-    Q = tf.FIFOQueue(128,[tf.float32,tf.float32,tf.string],shapes=[IN_SIZE,IN_SIZE,[1]])
+    Q = tf.FIFOQueue(128,[tf.float32,tf.float32,tf.string],shapes=[in_size,in_size,[1]])
     enQ = Q.enqueue([x,y,xPath])
     QR = tf.train.QueueRunner(
             Q,
@@ -47,7 +51,8 @@ def read(csvPath,batchSize=5,num_epochs=1,shuffle=True,augment=0):
             )
     tf.train.add_queue_runner(QR) 
     dQ = Q.dequeue()
-    X,Y,path = tf.train.batch(dQ,batchSize,16,allow_smaller_final_batch=True)
+    #X,Y,path = tf.train.batch(dQ,batchSize,16,allow_smaller_final_batch=True)
+    X,Y,path = tf.train.batch(dQ,batchSize,16)
     return X, Y, path
 
 
@@ -67,12 +72,13 @@ if __name__ == "__main__":
                 if coord.should_stop():
                     break
                 count += 1
-                x,y = sess.run([X,Y])
-                if x.min() < min:
-                    min = x.min()
-                if x.max() > max:
-                    max = x.max()
-                print(count,min,max)
+                x,y,path_ = sess.run([X,Y,path])
+		print(x.shape,y.shape,path_)
+                #if x.min() < min:
+                #    min = x.min()
+                #if x.max() > max:
+                #    max = x.max()
+                #print(count,min,max)
         except Exception,e:
             coord.request_stop(e)
         finally:

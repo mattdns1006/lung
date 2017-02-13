@@ -274,6 +274,7 @@ def rescale(imagePath):
             end = time.time()
             sitk.WriteImage(sitk.GetImageFromArray(lung_img),savePath+"orig.nrrd")
             print("Resizing took {0} seconds.".format(end-start))
+        resize()
     
         # Segment the lung structure
         def segment():
@@ -284,6 +285,7 @@ def rescale(imagePath):
             end = time.time()
             print("Segmenting took {0} seconds.".format(end-start))
             sitk.WriteImage(sitk.GetImageFromArray(lung_mask),savePath+"segment.nrrd")
+        segment()
 
         ##################### DRAW MASKS ######################
         annotations = getAnnotations(imagePath)
