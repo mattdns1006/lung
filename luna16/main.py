@@ -8,9 +8,18 @@ from model import model0 as model0
 import matplotlib.cm as cm
 sys.path.append("/Users/matt/misc/tfFunctions/")
 import paramCount
-from dice import dice
+#from dice import dice3D
 from paramCount import paramCount
+import SimpleITK as sitk
+from crop import showCrop
 from params import *
+
+def dice3D(Y,YPred):
+    smooth = 1.0
+    y_true_f = tf.reshape(Y,[-1])
+    y_pred_f = tf.reshape(YPred,[-1])
+    intersection = tf.reduce_sum(y_true_f*y_pred_f)
+    return (2.0 * intersection + smooth)/(tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
 
 def varSummary(var,name):
     with tf.name_scope('summary'):
@@ -19,7 +28,7 @@ def varSummary(var,name):
 
 def lossFn(y,yPred,regularization=0,beta=0.00094):
     with tf.variable_scope("loss"):
-        loss = tf.reduce_mean(tf.square(tf.sub(y,yPred)))
+        loss = tf.mul(dice3D(y,yPred),-1.0) # make it negative
         regLoss = loss
         if regularization == 1:
             weights = [w for w in tf.trainable_variables() if "/w/" in w.name]
@@ -28,6 +37,9 @@ def lossFn(y,yPred,regularization=0,beta=0.00094):
         varSummary(loss,"loss")
     with tf.variable_scope("regLoss"):
         varSummary(regLoss,"regLoss")
+    #with tf.variable_scope("dice"):
+    #    diceScore = tf.reduce_mean(dice3D(yPred,y))
+    #    varSummary(diceScore,"dice")
     return loss, regLoss 
 
 def trainer(lossFn, learningRate):
@@ -70,12 +82,12 @@ if __name__ == "__main__":
     FLAGS = flags.FLAGS 
     flags.DEFINE_float("lr",0.001,"Initial learning rate.")
     flags.DEFINE_float("lrD",1.00,"Learning rate division rate applied every epoch. (DEFAULT - nothing happens)")
-    flags.DEFINE_integer("inSize",70,"Size of input image")
-    flags.DEFINE_integer("initFeats",16,"Initial number of features.")
-    flags.DEFINE_integer("incFeats",8,"Number of features growing.")
+    flags.DEFINE_integer("inSize",64,"Size of input image")
+    flags.DEFINE_integer("initFeats",24,"Initial number of features.")
+    flags.DEFINE_integer("incFeats",0,"Number of features growing.")
     flags.DEFINE_float("drop",0.943,"Keep prob for dropout.")
     flags.DEFINE_integer("aug",1,"Augment.")
-    flags.DEFINE_integer("nDown",4,"Number of blocks going down.")
+    flags.DEFINE_integer("nDown",2,"Number of blocks going down.")
     flags.DEFINE_integer("bS",5,"Batch size.")
     flags.DEFINE_integer("load",0,"Load saved model.")
     flags.DEFINE_integer("trainAll",0,"Train on all data.")
@@ -119,7 +131,7 @@ if __name__ == "__main__":
             augment = FLAGS.aug 
             )
 
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.90)
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.80)
 
         merged = tf.summary.merge_all()
         paramCount()
@@ -140,26 +152,32 @@ if __name__ == "__main__":
             try:
                 while True:
                     if trTe in ["train","trainAll"]:
-                        _, summary,x,y,yPred,xPath = sess.run([trainOp,merged,X,Y,YPred,XPath],feed_dict={is_training:True,
-                                                                                                            drop:FLAGS.drop,
-                                                                                                            learningRate:FLAGS.lr})
+                        _, summary = sess.run([trainOp,merged],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
+
+                        if count % 400 == 0:
+                            print("Seen {0} examples".format(count))
+                            _, summary,x,y,yPred,path = sess.run([trainOp,merged,X,Y,YPred,XPath],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
+                            for i in xrange(x.shape[0]):
+                                wpX = imgPath +"model_x_{0}.nrrd".format(i)
+                                wpY = imgPath +"model_y_{0}.nrrd".format(i)
+                                sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
+                                sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpY)
 
                         trCount += batchSize
                         count += batchSize
                         trWriter.add_summary(summary,trCount)
-                        if count % 200 == 0:
-                            print("Seen {0} examples".format(count))
 
-                        if count % 10000 == 0:
-                            print("Saving")
+
+                        if count % 1000 == 0:
                             saver.save(sess,savePath)
+                            print("Saved.")
 
                         if count > 120000:
                             print("Finished training cba")
                             break
 
                     elif trTe == "test":
-                        summary,x,y,yPred,xPath = sess.run([merged,X,Y,YPred,XPath],feed_dict={is_training:False,drop:FLAGS.drop})
+                        summary,x,y,yPred,xPath = sess.run([merged,X,Y,YPred,XPath],feed_dict={is_training:False,drop:1.00})
                         teCount += batchSize
                         teWriter.add_summary(summary,teCount)
                         if teCount % 100 == 0:
@@ -167,7 +185,7 @@ if __name__ == "__main__":
                             #showBatch(x,y,yPred,wp="{0}/test.jpg".format(imgPath))
 
                     elif trTe == "fit":
-                        x, yPred,fp = sess.run([X,YPred,XPath],feed_dict={is_training:False,drop:FLAGS.drop})
+                        x, yPred,fp = sess.run([X,YPred,XPath],feed_dict={is_training:False,drop:1.00})
                         count += x.shape[0]
                         for i in xrange(x.shape[0]):
                             row = fp[i].tolist() + yPred[i].tolist()

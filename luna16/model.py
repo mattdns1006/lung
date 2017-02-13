@@ -71,6 +71,7 @@ def model0(x,is_training,initFeats=16,featsInc=0,nDown=6,filterSize=3,decay=0.95
     get_shape(x,print_shape=1)
     with tf.variable_scope("convIn"):
         x1 = af(bn(convolution3d(x,1,initFeats,3,stride=1),is_training=is_training,name="bn_0",decay=decay))
+    	get_shape(x1,print_shape=1)
 
     for block in range(nDown):
         if block == 0:

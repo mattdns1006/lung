@@ -5,7 +5,6 @@ import matplotlib.cm as cm
 import tensorflow as tf
 from params import *
 import pdb
-
 from crop import showCrop
 
 
@@ -41,7 +40,7 @@ def read(csvPath,batchSize=5,num_epochs=1,shuffle=True,augment=0):
     #if augment == 1:
     #    x = aug(x,inSize)
 
-    Q = tf.FIFOQueue(128,[tf.float32,tf.float32,tf.string],shapes=[in_size,in_size,[1]])
+    Q = tf.FIFOQueue(64,[tf.float32,tf.float32,tf.string],shapes=[in_size,in_size,[1]])
     enQ = Q.enqueue([x,y,xPath])
     QR = tf.train.QueueRunner(
             Q,
@@ -74,6 +73,7 @@ if __name__ == "__main__":
                 count += 1
                 x,y,path_ = sess.run([X,Y,path])
 		print(x.shape,y.shape,path_)
+		pdb.set_trace()
                 #if x.min() < min:
                 #    min = x.min()
                 #if x.max() > max:
