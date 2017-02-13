@@ -158,8 +158,8 @@ if __name__ == "__main__":
                             print("Seen {0} examples".format(count))
                             _, summary,x,y,yPred,path = sess.run([trainOp,merged,X,Y,YPred,XPath],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
                             for i in xrange(x.shape[0]):
-                                wpX = imgPath +"model_x_{0}.nrrd".format(i)
-                                wpY = imgPath +"model_y_{0}.nrrd".format(i)
+                                wpX = imgPath +"model_train_x_{0}.nrrd".format(i)
+                                wpY = imgPath +"model_train_y_{0}.nrrd".format(i)
                                 sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
                                 sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpY)
 
@@ -177,7 +177,15 @@ if __name__ == "__main__":
                             break
 
                     elif trTe == "test":
-                        summary,x,y,yPred,xPath = sess.run([merged,X,Y,YPred,XPath],feed_dict={is_training:False,drop:1.00})
+                        summary = sess.run([merged],feed_dict={is_training:False, drop:1.00})
+                        if teCount % 400 == 0:
+                            print("Seen {0} examples".format(count))
+                            summary,x,y,yPred,xPath = sess.run([merged,X,Y,YPred,XPath],feed_dict={is_training:False,drop:1.00})
+                            for i in xrange(x.shape[0]):
+                                wpX = imgPath +"model_test_x_{0}.nrrd".format(i)
+                                wpY = imgPath +"model_test_y_{0}.nrrd".format(i)
+                                sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
+                                sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpY)
                         teCount += batchSize
                         teWriter.add_summary(summary,teCount)
                         if teCount % 100 == 0:
