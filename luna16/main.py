@@ -177,7 +177,7 @@ if __name__ == "__main__":
                             break
 
                     elif trTe == "test":
-                        summary = sess.run([merged],feed_dict={is_training:False, drop:1.00})
+                        summary, _ = sess.run([merged,XPath],feed_dict={is_training:False, drop:1.00})
                         if teCount % 400 == 0:
                             print("Seen {0} examples".format(count))
                             summary,x,y,yPred,xPath = sess.run([merged,X,Y,YPred,XPath],feed_dict={is_training:False,drop:1.00})
@@ -189,7 +189,7 @@ if __name__ == "__main__":
                         teCount += batchSize
                         teWriter.add_summary(summary,teCount)
                         if teCount % 100 == 0:
-                            print("Seen {0} examples".format(teCount))
+                            print("Seen {0} test examples".format(teCount))
                             #showBatch(x,y,yPred,wp="{0}/test.jpg".format(imgPath))
 
                     elif trTe == "fit":
