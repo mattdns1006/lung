@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import os, pdb, glob,cv2,sys,argparse
+import scipy.stats as stats
 from tqdm import tqdm
 
 def showCrop(crop):
@@ -53,6 +54,7 @@ def main(showImgs=0,segmentation=0):
             showCrop(lungsCrop)
             showCrop(maskCrop)
     cropSize = 32 
+    maxTranslation = cropSize/2
     saveSitk = 0
     patients = glob.glob("preprocessedData/*/orig.nrrd")
     getCoords = lambda row: np.array([row.z,row.y,row.x])
@@ -69,33 +71,6 @@ def main(showImgs=0,segmentation=0):
         mask = sitk.GetArrayFromImage(mask)
         dims = np.array(lungs.shape)
         count = 0
-        for nodule in xrange(nNodules):
-            noduleCoords = getCoords(csv.ix[nodule])
-            noduleCoords = noduleCoords.round().astype(np.int16)
-            start = noduleCoords - cropSize
-            end = noduleCoords + cropSize
-            if np.any(start < 0):
-                where = np.where(start<0)
-                start[where] = 0 
-                end[where] = cropSize * 2
-            elif np.any(dims-end < 0):
-                where = np.where(dims-end<0)
-                end[where] = dims[where]
-                start[where] = dims[where] - cropSize*2
-
-            lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
-            maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
-            wpX = patientDir + "aug_x_{0}.bin".format(count)
-            wpY = patientDir + "aug_y_{0}.bin".format(count)
-            lungsCrop.tofile(wpX)
-            maskCrop.tofile(wpY)
-            count += 1
-            if saveSitk == True:
-                wpX = patientDir + "aug_x_{0}.nrrd".format(count)
-                wpY = patientDir + "aug_y_{0}.nrrd".format(count)
-                sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
-                sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
-
 
         # For every nodule make another file pair with no nodule in it (balanced)
         minRange = np.array([0,0,0]) + cropSize
@@ -104,29 +79,63 @@ def main(showImgs=0,segmentation=0):
         #showing()
 
 
-        for randomCrop in xrange(nNodules):
-            # Max and min ranges to sample from
-            z, y, x = [np.random.randint(minRange[i],maxRange[i]) for i in [0,1,2]]
-            noduleCoords = np.array([z,y,x])
+        for n in xrange(20): # make lots of data...
 
-            start = noduleCoords - cropSize
-            end = noduleCoords + cropSize
-            lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
-            maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
+            # Nodule data 
+            for nodule in xrange(nNodules):
+                noduleCoords = getCoords(csv.ix[nodule])
+                noduleCoords = noduleCoords.round().astype(np.int16)
+                noduleCoords += np.random.randint(-maxTranslation,maxTranslation,3) # Add some translation
+                start = noduleCoords - cropSize
+                end = noduleCoords + cropSize
+                if np.any(start < 0):
+                    where = np.where(start<0)
+                    start[where] = 0 
+                    end[where] = cropSize * 2
+                elif np.any(dims-end < 0):
+                    where = np.where(dims-end<0)
+                    end[where] = dims[where]
+                    start[where] = dims[where] - cropSize*2
 
-            wpX = patientDir + "aug_x_{0}.bin".format(count)
-            wpY = patientDir + "aug_y_{0}.bin".format(count)
-            lungsCrop.tofile(wpX)
-            maskCrop.tofile(wpY)
-            count += 1
-            if saveSitk == True:
-                wpX = patientDir + "aug_x_{0}.nrrd".format(count)
-                wpY = patientDir + "aug_y_{0}.nrrd".format(count)
-                sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
-                sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
-        totalCount += count
-        if totalCount % 100 == 0:
-            print("Total count so far = {0}.".format(totalCount))
+                lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
+                maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
+                wpX = patientDir + "aug_x_{0}.bin".format(count)
+                wpY = patientDir + "aug_y_{0}.bin".format(count)
+                lungsCrop.tofile(wpX)
+                maskCrop.tofile(wpY)
+                count += 1
+                if saveSitk == True:
+                    wpX = patientDir + "aug_x_{0}.nrrd".format(count)
+                    wpY = patientDir + "aug_y_{0}.nrrd".format(count)
+                    sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
+                    sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
+                #showCrop(lungsCrop)
+                #showCrop(maskCrop)
+
+            # Non (possibly) nodule data
+            for randomCrop in xrange(nNodules):
+                # Max and min ranges to sample from
+                z, y, x = [np.random.randint(minRange[i],maxRange[i]) for i in [0,1,2]]
+                noduleCoords = np.array([z,y,x])
+
+                start = noduleCoords - cropSize
+                end = noduleCoords + cropSize
+                lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
+                maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
+
+                wpX = patientDir + "aug_x_{0}.bin".format(count)
+                wpY = patientDir + "aug_y_{0}.bin".format(count)
+                lungsCrop.tofile(wpX)
+                maskCrop.tofile(wpY)
+                count += 1
+                if saveSitk == True:
+                    wpX = patientDir + "aug_x_{0}.nrrd".format(count)
+                    wpY = patientDir + "aug_y_{0}.nrrd".format(count)
+                    sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
+                    sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
+            totalCount += count
+            if totalCount % 100 == 0:
+                print("Total count so far = {0}.".format(totalCount))
 
 
 def makeCsvs():
