@@ -80,12 +80,12 @@ if __name__ == "__main__":
     nEpochs = 3 
     flags = tf.app.flags
     FLAGS = flags.FLAGS 
-    flags.DEFINE_float("lr",0.001,"Initial learning rate.")
+    flags.DEFINE_float("lr",0.0001,"Initial learning rate.")
     flags.DEFINE_float("lrD",1.00,"Learning rate division rate applied every epoch. (DEFAULT - nothing happens)")
     flags.DEFINE_integer("inSize",64,"Size of input image")
     flags.DEFINE_integer("initFeats",24,"Initial number of features.")
     flags.DEFINE_integer("incFeats",0,"Number of features growing.")
-    flags.DEFINE_float("drop",0.943,"Keep prob for dropout.")
+    flags.DEFINE_float("drop",0.944,"Keep prob for dropout.")
     flags.DEFINE_integer("aug",1,"Augment.")
     flags.DEFINE_integer("nDown",2,"Number of blocks going down.")
     flags.DEFINE_integer("bS",5,"Batch size.")
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     flags.DEFINE_integer("trainAll",0,"Train on all data.")
     flags.DEFINE_integer("fit",0,"Fit training data.")
     flags.DEFINE_integer("show",0,"Show for sanity.")
-    flags.DEFINE_integer("nEpochs",20,"Number of epochs to train for.")
+    flags.DEFINE_integer("nEpochs",2,"Number of epochs to train for.")
     flags.DEFINE_integer("test",0,"Just test.")
     batchSize = FLAGS.bS
     load = FLAGS.load
@@ -131,7 +131,7 @@ if __name__ == "__main__":
             augment = FLAGS.aug 
             )
 
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.80)
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.60)
 
         merged = tf.summary.merge_all()
         paramCount()
@@ -160,15 +160,17 @@ if __name__ == "__main__":
                             for i in xrange(x.shape[0]):
                                 wpX = imgPath +"model_train_x_{0}.nrrd".format(i)
                                 wpY = imgPath +"model_train_y_{0}.nrrd".format(i)
+                                wpYPred = imgPath +"model_train_yPred_{0}.nrrd".format(i)
                                 sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
-                                sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpY)
+                                sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
+                                sitk.WriteImage(sitk.GetImageFromArray(y[i]),wpY)
 
                         trCount += batchSize
                         count += batchSize
                         trWriter.add_summary(summary,trCount)
 
 
-                        if count % 1000 == 0:
+                        if count % 2000 == 0:
                             saver.save(sess,savePath)
                             print("Saved.")
 
@@ -184,8 +186,10 @@ if __name__ == "__main__":
                             for i in xrange(x.shape[0]):
                                 wpX = imgPath +"model_test_x_{0}.nrrd".format(i)
                                 wpY = imgPath +"model_test_y_{0}.nrrd".format(i)
+                                wpYPred = imgPath +"model_train_yPred_{0}.nrrd".format(i)
                                 sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
-                                sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpY)
+                                sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
+                                sitk.WriteImage(sitk.GetImageFromArray(y[i]),wpY)
                         teCount += batchSize
                         teWriter.add_summary(summary,teCount)
                         if teCount % 100 == 0:

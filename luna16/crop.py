@@ -142,24 +142,36 @@ def makeCsvs():
     directory = "csvs/"
     if not os.path.exists(directory):
         os.mkdir(directory)
-
+    clean()
     pathsX = glob.glob("preprocessedData/*/aug_x*")
     pathsY = [x.replace("_x","_y") for x in pathsX] 
     df = pd.DataFrame({"x":pathsX,"y":pathsY})
     os.chdir(directory)
     df.to_csv("train.csv",index=0)
-    split = int(0.85*df.shape[0])
+    split = int(0.9*df.shape[0])
     train = df.ix[:split]
     test = df.ix[split:]
     train.to_csv("trainCV.csv",index=0)
     test.to_csv("testCV.csv",index=0)
+
+def clean():
+    # Make sure all files are same size
+    pathsX = glob.glob("preprocessedData/*/aug_x*")
+    pathsY = [x.replace("_x","_y") for x in pathsX] 
+    pathsToRemove = [x for x in pathsX if os.path.getsize(x) != 524288]
+    for xPath in pathsToRemove:
+        yPath = xPath.replace("_x_","_y_")
+        os.remove(xPath)
+        os.remove(yPath)
+        print("Removed {0}.".format(xPath))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--show",type=bool,help="show images")
     args = parser.parse_args()
-    main(args.show)
+    #main(args.show)
+    clean()
     makeCsvs()
 
 
