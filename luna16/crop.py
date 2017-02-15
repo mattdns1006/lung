@@ -47,21 +47,27 @@ def show(img,coords):
     ax.add_artist(anno)
     plt.show()
 
-def main(showImgs=0,segmentation=0):
+def main(showImgs=0,removePrevious=0):
+    if removePrevious == 1:
+        pathsX = glob.glob("preprocessedData/*/aug_x*")
+        for xPath in pathsX:
+            yPath = xPath.replace("_x_","_y_")
+            os.remove(xPath)
+            os.remove(yPath)
     def showing():
         if showImgs == 1:
             show(lungs,noduleCoords)
             showCrop(lungsCrop)
             showCrop(maskCrop)
     cropSize = 32 
-    maxTranslation = cropSize/2
+    maxTranslation = cropSize/3
+    print("Max translation of nodule in x,y,z is +- {0}.".format(maxTranslation))
     saveSitk = 0
     patients = glob.glob("preprocessedData/*/orig.nrrd")
     getCoords = lambda row: np.array([row.z,row.y,row.x])
     patients.sort()
     totalCount = 0
-    for patient in tqdm(patients[:]):
-        print(patient)
+    for patient in tqdm(patients[:10]):
         patientDir = patient.replace("orig.nrrd","")
         csv = pd.read_csv(patient.replace("orig.nrrd","coord.csv"))
         nNodules = csv.shape[0]
@@ -79,7 +85,7 @@ def main(showImgs=0,segmentation=0):
         #showing()
 
 
-        for n in xrange(20): # make lots of data...
+        for n in xrange(10): # make lots of data...
 
             # Nodule data 
             for nodule in xrange(nNodules):
@@ -133,9 +139,6 @@ def main(showImgs=0,segmentation=0):
                     wpY = patientDir + "aug_y_{0}.nrrd".format(count)
                     sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
                     sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
-            totalCount += count
-            if totalCount % 100 == 0:
-                print("Total count so far = {0}.".format(totalCount))
 
 
 def makeCsvs():
@@ -170,7 +173,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--show",type=bool,help="show images")
     args = parser.parse_args()
-    #main(args.show)
+    main(args.show,removePrevious=1)
     clean()
     makeCsvs()
 

@@ -40,11 +40,11 @@ def read(csvPath,batchSize=5,num_epochs=1,shuffle=True,augment=0):
     #if augment == 1:
     #    x = aug(x,inSize)
 
-    Q = tf.FIFOQueue(64,[tf.float32,tf.float32,tf.string],shapes=[in_size,in_size,[1]])
+    Q = tf.FIFOQueue(128,[tf.float32,tf.float32,tf.string],shapes=[in_size,in_size,[1]])
     enQ = Q.enqueue([x,y,xPath])
     QR = tf.train.QueueRunner(
             Q,
-            [enQ]*16,
+            [enQ]*128,
             Q.close(),
             Q.close(cancel_pending_enqueues=True)
             )

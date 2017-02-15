@@ -80,20 +80,20 @@ if __name__ == "__main__":
     nEpochs = 3 
     flags = tf.app.flags
     FLAGS = flags.FLAGS 
-    flags.DEFINE_float("lr",0.0001,"Initial learning rate.")
+    flags.DEFINE_float("lr",0.001,"Initial learning rate.")
     flags.DEFINE_float("lrD",1.00,"Learning rate division rate applied every epoch. (DEFAULT - nothing happens)")
     flags.DEFINE_integer("inSize",64,"Size of input image")
-    flags.DEFINE_integer("initFeats",24,"Initial number of features.")
-    flags.DEFINE_integer("incFeats",0,"Number of features growing.")
-    flags.DEFINE_float("drop",0.944,"Keep prob for dropout.")
+    flags.DEFINE_integer("initFeats",16,"Initial number of features.")
+    flags.DEFINE_integer("incFeats",16,"Number of features growing.")
+    flags.DEFINE_float("drop",0.945,"Keep prob for dropout.")
     flags.DEFINE_integer("aug",1,"Augment.")
-    flags.DEFINE_integer("nDown",2,"Number of blocks going down.")
-    flags.DEFINE_integer("bS",5,"Batch size.")
+    flags.DEFINE_integer("nDown",6,"Number of blocks going down.")
+    flags.DEFINE_integer("bS",10,"Batch size.")
     flags.DEFINE_integer("load",0,"Load saved model.")
     flags.DEFINE_integer("trainAll",0,"Train on all data.")
     flags.DEFINE_integer("fit",0,"Fit training data.")
     flags.DEFINE_integer("show",0,"Show for sanity.")
-    flags.DEFINE_integer("nEpochs",2,"Number of epochs to train for.")
+    flags.DEFINE_integer("nEpochs",10,"Number of epochs to train for.")
     flags.DEFINE_integer("test",0,"Just test.")
     batchSize = FLAGS.bS
     load = FLAGS.load
@@ -131,7 +131,7 @@ if __name__ == "__main__":
             augment = FLAGS.aug 
             )
 
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.60)
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.90)
 
         merged = tf.summary.merge_all()
         paramCount()
