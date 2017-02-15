@@ -83,11 +83,11 @@ if __name__ == "__main__":
     flags.DEFINE_float("lr",0.001,"Initial learning rate.")
     flags.DEFINE_float("lrD",1.00,"Learning rate division rate applied every epoch. (DEFAULT - nothing happens)")
     flags.DEFINE_integer("inSize",64,"Size of input image")
-    flags.DEFINE_integer("initFeats",16,"Initial number of features.")
+    flags.DEFINE_integer("initFeats",8,"Initial number of features.")
     flags.DEFINE_integer("incFeats",16,"Number of features growing.")
     flags.DEFINE_float("drop",0.945,"Keep prob for dropout.")
     flags.DEFINE_integer("aug",1,"Augment.")
-    flags.DEFINE_integer("nDown",6,"Number of blocks going down.")
+    flags.DEFINE_integer("nDown",5,"Number of blocks going down.")
     flags.DEFINE_integer("bS",10,"Batch size.")
     flags.DEFINE_integer("load",0,"Load saved model.")
     flags.DEFINE_integer("trainAll",0,"Train on all data.")
@@ -111,11 +111,11 @@ if __name__ == "__main__":
     trCount = teCount = 0
     trTe = "train"
     assert FLAGS.test + FLAGS.trainAll + FLAGS.fit in [0,1], "Only one of trainAll, test or fit == 1"
-    what = ["train","test"]
+    what = ["train"]
     if FLAGS.test == 1:
         what = ["test"]
         load = 1
-        FLAGS.nEpochs = 1 
+        FLAGS.nEpochs = 3 
         FLAGS.aug = 0
 
     for trTe in what:
@@ -157,7 +157,7 @@ if __name__ == "__main__":
                         if count % 400 == 0:
                             print("Seen {0} examples".format(count))
                             _, summary,x,y,yPred,path = sess.run([trainOp,merged,X,Y,YPred,XPath],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
-                            for i in xrange(x.shape[0]):
+                            for i in xrange(4):
                                 wpX = imgPath +"model_train_x_{0}.nrrd".format(i)
                                 wpY = imgPath +"model_train_y_{0}.nrrd".format(i)
                                 wpYPred = imgPath +"model_train_yPred_{0}.nrrd".format(i)
@@ -186,7 +186,7 @@ if __name__ == "__main__":
                             for i in xrange(x.shape[0]):
                                 wpX = imgPath +"model_test_x_{0}.nrrd".format(i)
                                 wpY = imgPath +"model_test_y_{0}.nrrd".format(i)
-                                wpYPred = imgPath +"model_train_yPred_{0}.nrrd".format(i)
+                                wpYPred = imgPath +"model_test_yPred_{0}.nrrd".format(i)
                                 sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
                                 sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
                                 sitk.WriteImage(sitk.GetImageFromArray(y[i]),wpY)
@@ -199,7 +199,7 @@ if __name__ == "__main__":
                     elif trTe == "fit":
                         x, yPred,fp = sess.run([X,YPred,XPath],feed_dict={is_training:False,drop:1.00})
                         count += x.shape[0]
-                        for i in xrange(x.shape[0]):
+                        for i in xrange(4):
                             row = fp[i].tolist() + yPred[i].tolist()
                             df.append(row) 
                         if count % 600 == 0:

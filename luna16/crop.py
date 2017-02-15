@@ -67,7 +67,7 @@ def main(showImgs=0,removePrevious=0):
     getCoords = lambda row: np.array([row.z,row.y,row.x])
     patients.sort()
     totalCount = 0
-    for patient in tqdm(patients[:10]):
+    for patient in tqdm(patients[:]):
         patientDir = patient.replace("orig.nrrd","")
         csv = pd.read_csv(patient.replace("orig.nrrd","coord.csv"))
         nNodules = csv.shape[0]
@@ -85,7 +85,7 @@ def main(showImgs=0,removePrevious=0):
         #showing()
 
 
-        for n in xrange(10): # make lots of data...
+        for n in xrange(5): # make lots of data...
 
             # Nodule data 
             for nodule in xrange(nNodules):
@@ -156,6 +156,7 @@ def makeCsvs():
     test = df.ix[split:]
     train.to_csv("trainCV.csv",index=0)
     test.to_csv("testCV.csv",index=0)
+    print("CSVs made with train/test shapes = {0}/{1}".format(train.shape,test.shape))
 
 def clean():
     # Make sure all files are same size
@@ -173,7 +174,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--show",type=bool,help="show images")
     args = parser.parse_args()
-    main(args.show,removePrevious=1)
+    #main(args.show,removePrevious=1)
     clean()
     makeCsvs()
 
