@@ -1,8 +1,8 @@
 import tensorflow as tf
 import numpy as np
 import sys
-#sys.path.append("/home/msmith/misc/tfFunctions")
 from batchNorm2 import bn
+sys.path.append("/home/msmith/misc/tfFunctions")
 from paramCount import paramCount
 from params import *
 import pdb 

@@ -3,7 +3,7 @@ import tensorflow as tf
 
 def bn(x,is_training,name,decay=0.99):
     bn_train = batch_norm(x, decay=decay, center=True, scale=True, updates_collections=None, is_training=True, reuse=None, trainable=True, scope=name)
-    bn_infer = batch_norm(x, decay=decay, center=True, scale=True, updates_collections=None, is_training=False, reuse=True, trainable=True, scope=name)
+    bn_infer = batch_norm(x, decay=0.0, center=True, scale=True, updates_collections=None, is_training=False, reuse=True, trainable=False, scope=name)
     z = tf.cond(is_training, lambda: bn_train, lambda: bn_infer)
     return z
 

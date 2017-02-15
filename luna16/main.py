@@ -83,12 +83,12 @@ if __name__ == "__main__":
     flags.DEFINE_float("lr",0.001,"Initial learning rate.")
     flags.DEFINE_float("lrD",1.00,"Learning rate division rate applied every epoch. (DEFAULT - nothing happens)")
     flags.DEFINE_integer("inSize",64,"Size of input image")
-    flags.DEFINE_integer("initFeats",8,"Initial number of features.")
+    flags.DEFINE_integer("initFeats",16,"Initial number of features.")
     flags.DEFINE_integer("incFeats",16,"Number of features growing.")
     flags.DEFINE_float("drop",0.945,"Keep prob for dropout.")
     flags.DEFINE_integer("aug",1,"Augment.")
     flags.DEFINE_integer("nDown",5,"Number of blocks going down.")
-    flags.DEFINE_integer("bS",10,"Batch size.")
+    flags.DEFINE_integer("bS",8,"Batch size.")
     flags.DEFINE_integer("load",0,"Load saved model.")
     flags.DEFINE_integer("trainAll",0,"Train on all data.")
     flags.DEFINE_integer("fit",0,"Fit training data.")
@@ -154,8 +154,9 @@ if __name__ == "__main__":
                     if trTe in ["train","trainAll"]:
                         _, summary = sess.run([trainOp,merged],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
 
-                        if count % 400 == 0:
+                        if count % 64 == 0:
                             print("Seen {0} examples".format(count))
+                        if count % 800 == 0:
                             _, summary,x,y,yPred,path = sess.run([trainOp,merged,X,Y,YPred,XPath],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
                             for i in xrange(4):
                                 wpX = imgPath +"model_train_x_{0}.nrrd".format(i)
@@ -170,7 +171,7 @@ if __name__ == "__main__":
                         trWriter.add_summary(summary,trCount)
 
 
-                        if count % 2000 == 0:
+                        if count % 2048 == 0:
                             saver.save(sess,savePath)
                             print("Saved.")
 
