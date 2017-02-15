@@ -59,6 +59,11 @@ def nodes(batchSize,inSize,trainOrTest,initFeats,incFeats,nDown,num_epochs,augme
         print("Testing on validation set")
         shuffle = True
         num_epochs = 1
+    elif trainOrTest == "inference":
+        print("INFERRING")
+        csvPath = "csvs/testCV.csv"
+        num_epochs = 1
+        shuffle = 0
     X,Y,xPath = loadData.read(csvPath=csvPath,
             batchSize=batchSize,
             shuffle=shuffle,
@@ -95,6 +100,7 @@ if __name__ == "__main__":
     flags.DEFINE_integer("show",0,"Show for sanity.")
     flags.DEFINE_integer("nEpochs",10,"Number of epochs to train for.")
     flags.DEFINE_integer("test",0,"Just test.")
+    flags.DEFINE_integer("inference",0,"Infer.")
     batchSize = FLAGS.bS
     load = FLAGS.load
     if FLAGS.fit == 1 or FLAGS.test == 1:
@@ -116,6 +122,11 @@ if __name__ == "__main__":
         what = ["test"]
         load = 1
         FLAGS.nEpochs = 3 
+        FLAGS.aug = 0
+    if FLAGS.inference == 1:
+        what = ["inference"]
+        load = 1
+        FLAGS.nEpochs = 1 
         FLAGS.aug = 0
 
     for trTe in what:
@@ -144,91 +155,97 @@ if __name__ == "__main__":
             else:
                 tf.global_variables_initializer().run()
             tf.local_variables_initializer().run()
-            trWriter = tf.summary.FileWriter("summary/{0}/train/".format(specification),sess.graph)
-            teWriter = tf.summary.FileWriter("summary/{0}/test/".format(specification),sess.graph)
-            coord = tf.train.Coordinator()
-            threads = tf.train.start_queue_runners(sess=sess,coord=coord)
-            count = 0
-            try:
-                while True:
-                    if trTe in ["train","trainAll"]:
-                        _, summary = sess.run([trainOp,merged],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
+                
+            if not FLAGS.inference:
+                trWriter = tf.summary.FileWriter("summary/{0}/train/".format(specification),sess.graph)
+                teWriter = tf.summary.FileWriter("summary/{0}/test/".format(specification),sess.graph)
+                coord = tf.train.Coordinator()
+                threads = tf.train.start_queue_runners(sess=sess,coord=coord)
+                count = 0
+                try:
+                    while True:
+                        if trTe in ["train","trainAll"]:
+                            _, summary = sess.run([trainOp,merged],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
 
-                        if count % 64 == 0:
-                            print("Seen {0} examples".format(count))
-                        if count % 800 == 0:
-                            _, summary,x,y,yPred,path = sess.run([trainOp,merged,X,Y,YPred,XPath],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
+                            if count % 64 == 0:
+                                print("Seen {0} examples".format(count))
+                            if count % 800 == 0:
+                                _, summary,x,y,yPred,path = sess.run([trainOp,merged,X,Y,YPred,XPath],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
+                                for i in xrange(4):
+                                    wpX = imgPath +"model_train_x_{0}.nrrd".format(i)
+                                    wpY = imgPath +"model_train_y_{0}.nrrd".format(i)
+                                    wpYPred = imgPath +"model_train_yPred_{0}.nrrd".format(i)
+                                    sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
+                                    sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
+                                    sitk.WriteImage(sitk.GetImageFromArray(y[i]),wpY)
+
+                            trCount += batchSize
+                            count += batchSize
+                            trWriter.add_summary(summary,trCount)
+
+
+                            if count % 2048 == 0:
+                                saver.save(sess,savePath)
+                                print("Saved.")
+
+                            if count > 120000:
+                                print("Finished training cba")
+                                break
+
+                        elif trTe == "test":
+                            summary, _ = sess.run([merged,XPath],feed_dict={is_training:False, drop:1.00})
+                            if teCount % 400 == 0:
+                                print("Seen {0} examples".format(count))
+                                summary,x,y,yPred,xPath = sess.run([merged,X,Y,YPred,XPath],feed_dict={is_training:False,drop:1.00})
+                                for i in xrange(x.shape[0]):
+                                    wpX = imgPath +"model_test_x_{0}.nrrd".format(i)
+                                    wpY = imgPath +"model_test_y_{0}.nrrd".format(i)
+                                    wpYPred = imgPath +"model_test_yPred_{0}.nrrd".format(i)
+                                    sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
+                                    sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
+                                    sitk.WriteImage(sitk.GetImageFromArray(y[i]),wpY)
+                            teCount += batchSize
+                            teWriter.add_summary(summary,teCount)
+                            if teCount % 100 == 0:
+                                print("Seen {0} test examples".format(teCount))
+                                #showBatch(x,y,yPred,wp="{0}/test.jpg".format(imgPath))
+
+                        elif trTe == "fit":
+                            x, yPred,fp = sess.run([X,YPred,XPath],feed_dict={is_training:False,drop:1.00})
+                            count += x.shape[0]
                             for i in xrange(4):
-                                wpX = imgPath +"model_train_x_{0}.nrrd".format(i)
-                                wpY = imgPath +"model_train_y_{0}.nrrd".format(i)
-                                wpYPred = imgPath +"model_train_yPred_{0}.nrrd".format(i)
-                                sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
-                                sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
-                                sitk.WriteImage(sitk.GetImageFromArray(y[i]),wpY)
+                                row = fp[i].tolist() + yPred[i].tolist()
+                                df.append(row) 
+                            if count % 600 == 0:
+                                print("Seen {0} examples".format(count))
 
-                        trCount += batchSize
-                        count += batchSize
-                        trWriter.add_summary(summary,trCount)
-
-
-                        if count % 2048 == 0:
-                            saver.save(sess,savePath)
-                            print("Saved.")
-
-                        if count > 120000:
-                            print("Finished training cba")
+                        else:
                             break
 
-                    elif trTe == "test":
-                        summary, _ = sess.run([merged,XPath],feed_dict={is_training:False, drop:1.00})
-                        if teCount % 400 == 0:
-                            print("Seen {0} examples".format(count))
-                            summary,x,y,yPred,xPath = sess.run([merged,X,Y,YPred,XPath],feed_dict={is_training:False,drop:1.00})
-                            for i in xrange(x.shape[0]):
-                                wpX = imgPath +"model_test_x_{0}.nrrd".format(i)
-                                wpY = imgPath +"model_test_y_{0}.nrrd".format(i)
-                                wpYPred = imgPath +"model_test_yPred_{0}.nrrd".format(i)
-                                sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
-                                sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
-                                sitk.WriteImage(sitk.GetImageFromArray(y[i]),wpY)
-                        teCount += batchSize
-                        teWriter.add_summary(summary,teCount)
-                        if teCount % 100 == 0:
-                            print("Seen {0} test examples".format(teCount))
-                            #showBatch(x,y,yPred,wp="{0}/test.jpg".format(imgPath))
+                        if coord.should_stop():
+                            break
+                except Exception as e:
+                    coord.request_stop(e)
+                finally:
+                    coord.request_stop()
+                    coord.join(threads)
+                print("Finished! Seen {0} examples".format(count))
 
-                    elif trTe == "fit":
-                        x, yPred,fp = sess.run([X,YPred,XPath],feed_dict={is_training:False,drop:1.00})
-                        count += x.shape[0]
-                        for i in xrange(4):
-                            row = fp[i].tolist() + yPred[i].tolist()
-                            df.append(row) 
-                        if count % 600 == 0:
-                            print("Seen {0} examples".format(count))
+                if trTe == "train":
+                    lrC = FLAGS.lr
+                    FLAGS.lr /= FLAGS.lrD
+                    print("Dropped learning rate from {0} to {1}".format(lrC,FLAGS.lr))
+                    print("Saving in {0}".format(savePath))
+                    saver.save(sess,savePath)
+                elif trTe == "fit":
+                    Df = pd.DataFrame(df)
+                    Df["img"] = Df.img.apply(lambda x: x.split("/")[-1])
+                    Df.to_csv("submissions/submission_{0}.csv".format(specification),index=0)
+                    print("Written submission file.")
 
-                    else:
-                        break
+                sess.close()
 
-                    if coord.should_stop():
-                        break
-            except Exception as e:
-                coord.request_stop(e)
-            finally:
-                coord.request_stop()
-                coord.join(threads)
-            print("Finished! Seen {0} examples".format(count))
-
-            if trTe == "train":
-                lrC = FLAGS.lr
-                FLAGS.lr /= FLAGS.lrD
-                print("Dropped learning rate from {0} to {1}".format(lrC,FLAGS.lr))
-                print("Saving in {0}".format(savePath))
-                saver.save(sess,savePath)
-            elif trTe == "fit":
-                Df = pd.DataFrame(df)
-                Df["img"] = Df.img.apply(lambda x: x.split("/")[-1])
-                Df.to_csv("submissions/submission_{0}.csv".format(specification),index=0)
-                print("Written submission file.")
-
-            sess.close()
+            else:
+                print("Here")
+                pdb.set_trace()
 

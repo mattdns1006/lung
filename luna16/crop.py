@@ -5,7 +5,11 @@ import matplotlib.cm as cm
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import os, pdb, glob,cv2,sys,argparse
 import scipy.stats as stats
+from params import *
 from tqdm import tqdm
+
+PATIENTS = glob.glob("preprocessedData/*/orig.nrrd")
+PATIENTS.sort()
 
 def showCrop(crop):
     cropMiddle = crop.shape[0]/2
@@ -47,7 +51,7 @@ def show(img,coords):
     ax.add_artist(anno)
     plt.show()
 
-def main(showImgs=0,removePrevious=0):
+def aug(showImgs=0,removePrevious=0):
     if removePrevious == 1:
         pathsX = glob.glob("preprocessedData/*/aug_x*")
         for xPath in pathsX:
@@ -59,15 +63,14 @@ def main(showImgs=0,removePrevious=0):
             show(lungs,noduleCoords)
             showCrop(lungsCrop)
             showCrop(maskCrop)
-    cropSize = 32 
+    cropSize = IN_SIZE/2 
     maxTranslation = cropSize/3
     print("Max translation of nodule in x,y,z is +- {0}.".format(maxTranslation))
     saveSitk = 0
-    patients = glob.glob("preprocessedData/*/orig.nrrd")
     getCoords = lambda row: np.array([row.z,row.y,row.x])
     patients.sort()
     totalCount = 0
-    for patient in tqdm(patients[:]):
+    for patient in tqdm(PATIENTS[:]):
         patientDir = patient.replace("orig.nrrd","")
         csv = pd.read_csv(patient.replace("orig.nrrd","coord.csv"))
         nNodules = csv.shape[0]
@@ -169,14 +172,38 @@ def clean():
         os.remove(yPath)
         print("Removed {0}.".format(xPath))
 
+def slicer():
+    '''
+    Split NRRD CT Scan file into 64/64/64 disjoint cubes for inference
+    '''
+    for patient in PATIENTS[-1:]:
+        patientDir = patient.replace("orig.nrrd","")
+        scan = sitk.ReadImage(patient)
+        scan = sitk.GetArrayFromImage(scan)
+        shape = np.array(scan.shape)
+        multiple = 5
+        desired = np.multiply(IN_SIZE,multiple) 
+        while True:
+            # Pad until divisible by 64
+            if np.any(shape>desired) == True:
+                multiple += 1
+                desired = np.multiply(IN_SIZE,multiple) 
+            else:
+                difference = desired - shape
+                padding = ((0,difference[0]),(0,difference[1]),(0,difference[2]))
+                pdb.set_trace()
+                scan = np.pad(scan,padding,"edge")
+        pdb.set_trace()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--show",type=bool,help="show images")
     args = parser.parse_args()
-    #main(args.show,removePrevious=1)
-    clean()
-    makeCsvs()
+    #aug(args.show,removePrevious=1)
+    #clean()
+    #makeCsvs()
+    slicer()
 
 
 
