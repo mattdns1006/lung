@@ -98,7 +98,7 @@ if __name__ == "__main__":
     flags.DEFINE_integer("trainAll",0,"Train on all data.")
     flags.DEFINE_integer("fit",0,"Fit training data.")
     flags.DEFINE_integer("show",0,"Show for sanity.")
-    flags.DEFINE_integer("nEpochs",10,"Number of epochs to train for.")
+    flags.DEFINE_integer("nEpochs",20,"Number of epochs to train for.")
     flags.DEFINE_integer("test",0,"Just test.")
     flags.DEFINE_integer("inference",0,"Infer.")
     batchSize = FLAGS.bS
@@ -188,9 +188,6 @@ if __name__ == "__main__":
                                 saver.save(sess,savePath)
                                 print("Saved.")
 
-                            if count > 120000:
-                                print("Finished training cba")
-                                break
 
                         elif trTe == "test":
                             summary, _ = sess.run([merged,XPath],feed_dict={is_training:False, drop:1.00})
@@ -252,11 +249,11 @@ if __name__ == "__main__":
                         for i in xrange(x.shape[0]):
                             wp = path[i][0]
 
-                            wpX =  wp.replace(".bin","_fittedX.nrrd")
-                            wpYPred =  wp.replace(".bin","_fittedY.nrrd")
+                            wpX =  wp.replace(".bin","_fittedX.bin")
+                            wpYPred =  wp.replace(".bin","_fittedY.bin")
                             print(wpYPred,yPred[i].max())
-                            sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
-                            sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
+                            x[i].tofile(wpX)
+                            yPred[i].tofile(wpYPred)
                 except Exception as e:
                     coord.request_stop(e)
                 finally:

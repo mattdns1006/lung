@@ -33,7 +33,7 @@ if __name__ == "__main__":
     cuber = Cubify(oldshape,newshape)
     out = cuber.cubify(x)
     back = cuber.uncubify(out)
-    transpose = [0,2,4,1,3,5]
+    #transpose = [0,2,4,1,3,5]
     #possibleTransposes = set(itertools.permutations(transpose))
     #for perm in possibleTransposes:
     #    reshape = out.reshape(2,2,2,2,2,2).transpose(perm).flatten() 
