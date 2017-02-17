@@ -61,7 +61,7 @@ def nodes(batchSize,inSize,trainOrTest,initFeats,incFeats,nDown,num_epochs,augme
         num_epochs = 1
     elif trainOrTest == "inference":
         print("INFERRING")
-        csvPath = "csvs/testCV.csv"
+        csvPath = glob.glob("preprocessedData/*/sliced/*.csv")[0] 
         num_epochs = 1
         shuffle = 0
     X,Y,xPath = loadData.read(csvPath=csvPath,
@@ -155,12 +155,12 @@ if __name__ == "__main__":
             else:
                 tf.global_variables_initializer().run()
             tf.local_variables_initializer().run()
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(sess=sess,coord=coord)
                 
             if not FLAGS.inference:
                 trWriter = tf.summary.FileWriter("summary/{0}/train/".format(specification),sess.graph)
                 teWriter = tf.summary.FileWriter("summary/{0}/test/".format(specification),sess.graph)
-                coord = tf.train.Coordinator()
-                threads = tf.train.start_queue_runners(sess=sess,coord=coord)
                 count = 0
                 try:
                     while True:
@@ -246,6 +246,22 @@ if __name__ == "__main__":
                 sess.close()
 
             else:
-                print("Here")
-                pdb.set_trace()
+                try:
+                    while True:
+                        x,yPred,path = sess.run([X,YPred,XPath],feed_dict={is_training:False, drop:1.00})
+                        for i in xrange(x.shape[0]):
+                            wp = path[i][0]
+
+                            wpX =  wp.replace(".bin","_fittedX.nrrd")
+                            wpYPred =  wp.replace(".bin","_fittedY.nrrd")
+                            print(wpYPred,yPred[i].max())
+                            sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
+                            sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
+                except Exception as e:
+                    coord.request_stop(e)
+                finally:
+                    coord.request_stop()
+                    coord.join(threads)
+                print("Finished inference!")
+
 

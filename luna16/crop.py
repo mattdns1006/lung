@@ -63,12 +63,11 @@ def aug(showImgs=0,removePrevious=0):
             show(lungs,noduleCoords)
             showCrop(lungsCrop)
             showCrop(maskCrop)
-    cropSize = IN_SIZE/2 
+    cropSize = IN_SIZE[0]/2 
     maxTranslation = cropSize/3
     print("Max translation of nodule in x,y,z is +- {0}.".format(maxTranslation))
     saveSitk = 0
     getCoords = lambda row: np.array([row.z,row.y,row.x])
-    patients.sort()
     totalCount = 0
     for patient in tqdm(PATIENTS[:]):
         patientDir = patient.replace("orig.nrrd","")
@@ -176,8 +175,12 @@ def slicer():
     '''
     Split NRRD CT Scan file into 64/64/64 disjoint cubes for inference
     '''
+
     for patient in PATIENTS[-1:]:
-        patientDir = patient.replace("orig.nrrd","")
+        sliceDir = "sliced/"
+        patientDir = patient.replace("orig.nrrd","") + sliceDir
+        if not os.path.exists(patientDir):
+            os.mkdir(patientDir)
         scan = sitk.ReadImage(patient)
         scan = sitk.GetArrayFromImage(scan)
         shape = np.array(scan.shape)
@@ -191,16 +194,37 @@ def slicer():
             else:
                 difference = desired - shape
                 padding = ((0,difference[0]),(0,difference[1]),(0,difference[2]))
-                pdb.set_trace()
-                scan = np.pad(scan,padding,"edge")
-        pdb.set_trace()
+                scan = np.pad(scan,padding,"constant")
+                break
+
+        N = scan.shape[0]/IN_SIZE[0]
+        split = np.split(scan,N)
+        slices = []
+        slices = [np.split(x,N,1) for x in split]#
+        for j in xrange(N):
+            for k in xrange(N):
+                slices[j][k] = np.split(slices[j][k],N,2)
+
+        count = 0
+        for i in xrange(N):
+            for j in xrange(N):
+                for k in xrange(N):
+                    wp = patientDir + "sliced_{0}_{1}_{2}.bin".format(i,j,k)
+                    count += 1
+                    slices[i][j][k].tofile(wp)
+        paths = glob.glob(patientDir + "*.bin")
+        y = ["dummy.bin" for x in paths]
+        csv = pd.DataFrame({"x":paths,"y":y})
+        csv.to_csv(patientDir + "csv.csv", index=0)
+        sitk.WriteImage(sitk.GetImageFromArray(scan),patientDir + "orig.nrrd")
+
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--show",type=bool,help="show images")
     args = parser.parse_args()
-    #aug(args.show,removePrevious=1)
+    #aug(args.show,removePrevious=0)
     #clean()
     #makeCsvs()
     slicer()
