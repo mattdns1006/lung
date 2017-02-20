@@ -62,6 +62,7 @@ def nodes(batchSize,inSize,trainOrTest,initFeats,incFeats,nDown,num_epochs,augme
     elif trainOrTest == "inference":
         print("INFERRING")
         csvPath = glob.glob("preprocessedData/*/sliced/*.csv")[0] 
+        pdb.set_trace()
         num_epochs = 1
         shuffle = 0
     X,Y,xPath = loadData.read(csvPath=csvPath,
@@ -248,11 +249,10 @@ if __name__ == "__main__":
                         x,yPred,path = sess.run([X,YPred,XPath],feed_dict={is_training:False, drop:1.00})
                         for i in xrange(x.shape[0]):
                             wp = path[i][0]
-
-                            wpX =  wp.replace(".bin","_fittedX.bin")
-                            wpYPred =  wp.replace(".bin","_fittedY.bin")
-                            print(wpYPred,yPred[i].max())
-                            x[i].tofile(wpX)
+                            #wpX =  wp.replace(".bin","_fittedX.bin")
+                            wpYPred =  wp.replace(".bin","_y.bin")
+                            #print(wpYPred,yPred[i].max())
+                            #x[i].tofile(wpX)
                             yPred[i].tofile(wpYPred)
                 except Exception as e:
                     coord.request_stop(e)

@@ -172,79 +172,77 @@ def clean():
         os.remove(yPath)
         print("Removed {0}.".format(xPath))
 
-def slicer():
+def pad(arr,desiredShape):
+    shape = arr.shape    
+    difference = desiredShape - shape
+    padding = ((0,difference[0]),(0,difference[1]),(0,difference[2]))
+    arr = np.pad(arr,padding,"constant")
+    return arr 
+
+def slicer(patientDir):
     '''
     Split NRRD CT Scan file into 64/64/64 disjoint cubes for inference
     '''
+    multiple = 4
+    desired = np.multiply(IN_SIZE,multiple) 
+    newshape = np.array(IN_SIZE)
 
-    for patient in PATIENTS[-1:]:
-        sliceDir = "sliced/"
-        patientDir = patient.replace("orig.nrrd","") + sliceDir
-        if not os.path.exists(patientDir):
-            os.mkdir(patientDir)
+    cuber = Cubify(oldshape=desired,newshape=newshape)
+    
 
-        scan = sitk.ReadImage(patient)
-        scan = sitk.GetArrayFromImage(scan)
-        shape = np.array(scan.shape)
-        multiple = 4
-        desired = np.multiply(IN_SIZE,multiple) 
+    sliceDir = patientDir + "sliced/"
+    if not os.path.exists(sliceDir):
+        os.mkdir(sliceDir)
 
-        # crop the image to fit desired --- NOTE WE ARE LOSING INFO (EDGE) HERE BE CAREFUL
-        excess = np.abs(desired - shape)
-        excess /= 2
-        scan = scan[excess[0]:-excess[0],excess[1]:-excess[1],excess[2]:-excess[2]]
-        scan = cubify(scan,IN_SIZE)
-        nCubes = scan.shape[0]
-        pdb.set_trace()
-        
-        #while True:
-        #    # Pad until divisible by 64
-        #    if np.any(shape>desired) == True:
-        #        multiple += 1
-        #        desired = np.multiply(IN_SIZE,multiple) 
-        #    else:
-        #        difference = desired - shape
-        #        padding = ((0,difference[0]),(0,difference[1]),(0,difference[2]))
-        #        scan = np.pad(scan,padding,"constant")
-        #        break
+    patient = patientDir + "/orig.nrrd"
+    scan = sitk.ReadImage(patient)
+    scan = sitk.GetArrayFromImage(scan)
+    print(scan.dtype)
+    shape = np.array(scan.shape)
 
-        #N = scan.shape[0]/IN_SIZE[0]
-        #split = np.split(scan,N)
-        #slices = []
-        #slices = [np.split(x,N,1) for x in split]#
-        #for j in xrange(N):
-        #    for k in xrange(N):
-        #        slices[j][k] = np.split(slices[j][k],N,2)
 
-        #count = 0
-        #for i in xrange(N):
-        #    for j in xrange(N):
-        #        for k in xrange(N):
-        #            wp = patientDir + "sliced_{0}_{1}_{2}.bin".format(i,j,k)
-        #            count += 1
-        #            slices[i][j][k].tofile(wp)
-        paths = glob.glob(patientDir + "*.bin")
-        y = ["dummy.bin" for x in paths]
-        csv = pd.DataFrame({"x":paths,"y":y})
-        csv.to_csv(patientDir + "csv.csv", index=0)
-        sitk.WriteImage(sitk.GetImageFromArray(scan),patientDir + "orig.nrrd")
+    # crop the image to fit desired --- NOTE WE ARE LOSING INFO (EDGE) HERE BE CAREFUL
+    excess = np.abs(desired - shape)
+    excess1 = excess/2
+    excess2 = excess - excess1
+    scan = scan[excess1[0]:-excess2[0],excess1[1]:-excess2[1],excess1[2]:-excess2[2]]
+
+    scan = pad(scan,desired)
+
+    sitk.WriteImage(sitk.GetImageFromArray(scan),sliceDir + "orig.nrrd")
+
+    scan = cuber.cubify(scan)
+    nCubes = scan.shape[0]
+
+    for arrNo in range(nCubes):
+        wp = sliceDir + "sliced_{0}.bin".format(arrNo)
+        scan[arrNo].tofile(wp)
+    paths = glob.glob(sliceDir + "*.bin")
+    y = ["dummy.bin" for x in paths]
+    csv = pd.DataFrame({"x":paths,"y":y})
+    csv.to_csv(sliceDir + "csv.csv", index=0)
+
 
 def grouper(patientDir):
-    N = 4
-    scan = []
-    for i in xrange(1):
-	    for j in xrange(1):
-		    for k in xrange(N):
-			    suffix = "{0}_{1}_{2}".format(i,j,k)
-			    path = patientDir + "sliced/sliced_{0}_fittedX.bin".format(suffix)
-			    print(path)
-			    img = np.fromfile(path,dtype=np.float32).reshape(IN_SIZE)
-			    scan.append(img)
-			    #showCrop(img)
+    multiple = 4
+    desired = np.multiply(IN_SIZE,multiple) 
+    newshape = np.array(IN_SIZE)
+    cuber = Cubify(oldshape=desired,newshape=newshape)
+
+    patientDir += "sliced/"
+    nCubes = len(glob.glob(patientDir+"sliced_*_y.bin"))
+    scan = np.empty((nCubes,IN_SIZE[0],IN_SIZE[1],IN_SIZE[2]))
+    for i in xrange(nCubes):
+
+        path = patientDir + "sliced_{0}_y.bin".format(i)
+        img = np.fromfile(path,dtype=np.float32).reshape(IN_SIZE)
+        scan[i] = img
 
     scan = np.array(scan)
-    pdb.set_trace()
-    showCrop(scan)
+    scan = cuber.uncubify(scan)
+    sitk.WriteImage(sitk.GetImageFromArray(scan),patientDir + "predicted.nrrd")
+
+    #showCrop(scan)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -253,8 +251,10 @@ if __name__ == "__main__":
     #aug(args.show,removePrevious=0)
     #clean()
     #makeCsvs()
-    slicer()
-    #grouper(PATIENTS[-1].replace("orig.nrrd",""))
+    patientDir = PATIENTS[1].replace("orig.nrrd","")
+    print(patientDir)
+    #slicer(patientDir)
+    grouper(patientDir)
 
 
 

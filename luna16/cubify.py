@@ -1,6 +1,6 @@
 import numpy as np
 import pdb
-np.set_printoptions(precision=3,linewidth=300)
+#np.set_printoptions(precision=3,linewidth=300)
 
 class Cubify():
     def __init__(self,oldshape,newshape):
@@ -11,7 +11,8 @@ class Cubify():
         order = np.arange(len(self.tmpshape))
         self.order = np.concatenate([order[::2], order[1::2]])
         self.reverseOrder = self.order.copy()
-        self.reverseOrder[1:-1] = self.reverseOrder[1:-1][::-1]
+        #self.reverseOrder[1:-1] = self.reverseOrder[1:-1][::-1]
+        self.reverseOrder = np.arange(len(self.tmpshape)).reshape(2,-1).ravel(order='F') 
         self.reverseReshape = np.concatenate([self.repeats,self.newshape])
 
     def cubify(self,arr):
@@ -30,6 +31,7 @@ if __name__ == "__main__":
     x = np.arange(N**3).reshape(N,N,N)
     oldshape = x.shape
     newshape = np.array([3,3,3])
+    
     cuber = Cubify(oldshape,newshape)
     out = cuber.cubify(x)
     back = cuber.uncubify(out)

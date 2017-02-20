@@ -314,6 +314,7 @@ if __name__ == "__main__":
     count = 0
     mkDirs()
     IMAGE_PATHS.sort()
+    pdb.set_trace()
     for i in tqdm(xrange(len(IMAGE_PATHS))):
         path = IMAGE_PATHS[i]
         nNodules = getAnnotations(path).shape[0]
