@@ -88,7 +88,7 @@ def aug(showImgs=0,removePrevious=0):
         #showing()
 
 
-        for n in xrange(5): # make lots of data...
+        for n in xrange(30): # make lots of data...
 
             # Nodule data 
             for nodule in xrange(nNodules):
@@ -153,13 +153,18 @@ def makeCsvs():
     pathsY = [x.replace("_x","_y") for x in pathsX] 
     df = pd.DataFrame({"x":pathsX,"y":pathsY})
     os.chdir(directory)
-    df.to_csv("train.csv",index=0)
+
     split = int(0.9*df.shape[0])
     train = df.ix[:split]
+    train = train.sample(frac=1).reset_index(drop=True)
     test = df.ix[split:]
     train.to_csv("trainCV.csv",index=0)
     test.to_csv("testCV.csv",index=0)
     print("CSVs made with train/test shapes = {0}/{1}".format(train.shape,test.shape))
+
+    df = df.sample(frac=1).reset_index(drop=True)
+    df.to_csv("train.csv",index=0)
+
 
 def clean():
     # Make sure all files are same size
@@ -250,11 +255,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     #aug(args.show,removePrevious=0)
     #clean()
-    #makeCsvs()
+    makeCsvs()
     patientDir = PATIENTS[1].replace("orig.nrrd","")
     print(patientDir)
     #slicer(patientDir)
-    grouper(patientDir)
+    #grouper(patientDir)
 
 
 

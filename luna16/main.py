@@ -99,7 +99,7 @@ if __name__ == "__main__":
     flags.DEFINE_integer("trainAll",0,"Train on all data.")
     flags.DEFINE_integer("fit",0,"Fit training data.")
     flags.DEFINE_integer("show",0,"Show for sanity.")
-    flags.DEFINE_integer("nEpochs",20,"Number of epochs to train for.")
+    flags.DEFINE_integer("nEpochs",10,"Number of epochs to train for.")
     flags.DEFINE_integer("test",0,"Just test.")
     flags.DEFINE_integer("inference",0,"Infer.")
     batchSize = FLAGS.bS
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     if FLAGS.test == 1:
         what = ["test"]
         load = 1
-        FLAGS.nEpochs = 3 
+        FLAGS.nEpochs = 1
         FLAGS.aug = 0
     if FLAGS.inference == 1:
         what = ["inference"]
@@ -166,23 +166,25 @@ if __name__ == "__main__":
                 try:
                     while True:
                         if trTe in ["train","trainAll"]:
-                            _, summary = sess.run([trainOp,merged],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
+                            _, = sess.run([trainOp],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
 
                             if count % 64 == 0:
                                 print("Seen {0} examples".format(count))
-                            if count % 800 == 0:
+                            if count % 32  == 0:
                                 _, summary,x,y,yPred,path = sess.run([trainOp,merged,X,Y,YPred,XPath],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
-                                for i in xrange(4):
-                                    wpX = imgPath +"model_train_x_{0}.nrrd".format(i)
-                                    wpY = imgPath +"model_train_y_{0}.nrrd".format(i)
-                                    wpYPred = imgPath +"model_train_yPred_{0}.nrrd".format(i)
-                                    sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
-                                    sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
-                                    sitk.WriteImage(sitk.GetImageFromArray(y[i]),wpY)
+                                trWriter.add_summary(summary,trCount)
+                                if count % 32*8 == 0:
+                                    for i in xrange(4):
+                                        wpX = imgPath +"model_train_x_{0}.nrrd".format(i)
+                                        wpY = imgPath +"model_train_y_{0}.nrrd".format(i)
+                                        wpYPred = imgPath +"model_train_yPred_{0}.nrrd".format(i)
+                                        sitk.WriteImage(sitk.GetImageFromArray(x[i]),wpX)
+                                        sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
+                                        sitk.WriteImage(sitk.GetImageFromArray(y[i]),wpY)
 
                             trCount += batchSize
                             count += batchSize
-                            trWriter.add_summary(summary,trCount)
+
 
 
                             if count % 2048 == 0:
