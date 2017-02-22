@@ -99,7 +99,7 @@ if __name__ == "__main__":
     flags.DEFINE_integer("trainAll",0,"Train on all data.")
     flags.DEFINE_integer("fit",0,"Fit training data.")
     flags.DEFINE_integer("show",0,"Show for sanity.")
-    flags.DEFINE_integer("nEpochs",10,"Number of epochs to train for.")
+    flags.DEFINE_integer("nEpochs",20,"Number of epochs to train for.")
     flags.DEFINE_integer("test",0,"Just test.")
     flags.DEFINE_integer("inference",0,"Infer.")
     batchSize = FLAGS.bS
