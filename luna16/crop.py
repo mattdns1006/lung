@@ -150,20 +150,26 @@ def makeCsvs():
         os.mkdir(directory)
     clean()
     pathsX = glob.glob("preprocessedData/*/aug_x*")
+    pathsX.sort()
     pathsY = [x.replace("_x","_y") for x in pathsX] 
     df = pd.DataFrame({"x":pathsX,"y":pathsY})
     os.chdir(directory)
 
     split = int(0.9*df.shape[0])
+
+    train = df.copy()
     train = df.ix[:split]
     train = train.sample(frac=1).reset_index(drop=True)
+
     test = df.ix[split:]
     train.to_csv("trainCV.csv",index=0)
     test.to_csv("testCV.csv",index=0)
     print("CSVs made with train/test shapes = {0}/{1}".format(train.shape,test.shape))
 
+
     df = df.sample(frac=1).reset_index(drop=True)
     df.to_csv("train.csv",index=0)
+
 
 
 def clean():
@@ -202,7 +208,6 @@ def slicer(patientDir):
     patient = patientDir + "/orig.nrrd"
     scan = sitk.ReadImage(patient)
     scan = sitk.GetArrayFromImage(scan)
-    print(scan.dtype)
     shape = np.array(scan.shape)
 
 
@@ -223,6 +228,7 @@ def slicer(patientDir):
         wp = sliceDir + "sliced_{0}.bin".format(arrNo)
         scan[arrNo].tofile(wp)
     paths = glob.glob(sliceDir + "*.bin")
+    paths = [os.path.abspath(path) for path in paths]
     y = ["dummy.bin" for x in paths]
     csv = pd.DataFrame({"x":paths,"y":y})
     csv.to_csv(sliceDir + "csv.csv", index=0)
@@ -235,17 +241,28 @@ def grouper(patientDir):
     cuber = Cubify(oldshape=desired,newshape=newshape)
 
     patientDir += "sliced/"
-    nCubes = len(glob.glob(patientDir+"sliced_*_y.bin"))
+    nCubes = len(glob.glob(patientDir+"sliced_*_yPred.bin"))
+    pdb.set_trace()
     scan = np.empty((nCubes,IN_SIZE[0],IN_SIZE[1],IN_SIZE[2]))
     for i in xrange(nCubes):
 
-        path = patientDir + "sliced_{0}_y.bin".format(i)
+        path = patientDir + "sliced_{0}_yPred.bin".format(i)
         img = np.fromfile(path,dtype=np.float32).reshape(IN_SIZE)
         scan[i] = img
 
     scan = np.array(scan)
     scan = cuber.uncubify(scan)
     sitk.WriteImage(sitk.GetImageFromArray(scan),patientDir + "predicted.nrrd")
+
+    # Original image
+    orig = sitk.ReadImage(patientDir+"../orig.nrrd")
+    orig= sitk.GetArrayFromImage(orig)
+    desired = np.array(orig.shape)
+    difference = desired - np.array(scan.shape)
+    difference = difference/2
+    padding = ((difference[0],difference[0]),(difference[1],difference[1]),(difference[2],difference[2]))
+    scanPad = np.pad(scan,padding,"constant")
+    sitk.WriteImage(sitk.GetImageFromArray(scanPad),patientDir + "predictedPad.nrrd")
 
     #showCrop(scan)
 
@@ -255,11 +272,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     #aug(args.show,removePrevious=0)
     #clean()
-    makeCsvs()
-    patientDir = PATIENTS[1].replace("orig.nrrd","")
+    #makeCsvs()
+    patientDir = PATIENTS[2].replace("orig.nrrd","")
     print(patientDir)
     #slicer(patientDir)
-    #grouper(patientDir)
+    grouper(patientDir)
 
 
 

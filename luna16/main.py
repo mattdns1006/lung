@@ -61,8 +61,8 @@ def nodes(batchSize,inSize,trainOrTest,initFeats,incFeats,nDown,num_epochs,augme
         num_epochs = 1
     elif trainOrTest == "inference":
         print("INFERRING")
-        csvPath = glob.glob("preprocessedData/*/sliced/*.csv")[0] 
-        pdb.set_trace()
+        csvPath = glob.glob("../preprocessedData/*/sliced/*.csv")[0] 
+        print(csvPath)
         num_epochs = 1
         shuffle = 0
     X,Y,xPath = loadData.read(csvPath=csvPath,
@@ -252,7 +252,7 @@ if __name__ == "__main__":
                         for i in xrange(x.shape[0]):
                             wp = path[i][0]
                             #wpX =  wp.replace(".bin","_fittedX.bin")
-                            wpYPred =  wp.replace(".bin","_y.bin")
+                            wpYPred =  wp.replace(".bin","_yPred.bin")
                             #print(wpYPred,yPred[i].max())
                             #x[i].tofile(wpX)
                             yPred[i].tofile(wpYPred)

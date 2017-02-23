@@ -17,13 +17,8 @@ from dicom.dataset import Dataset, FileDataset
 from tqdm import tqdm
 import datetime, time
 import scipy.misc
-import glob
+import glob,pdb
 import SimpleITK as sitk
-
-IMAGE_PATHS = glob.glob("/home/msmith/luna16/subset*/*.mhd")
-CANDIDATES = pd.read_csv("candidates_V2.csv")
-ANNOTATIONS = pd.read_csv("annotations.csv")
-
 
 def plot_3d(image, threshold=-300):
     
@@ -59,7 +54,7 @@ def read_ct_scan(folder_name):
         # Get the pixel values for all the slices
         slices = np.stack([s.pixel_array for s in slices])
         slices[slices == -2000] = 0
-        return slices
+        return slices, spacing
 
 def plot_ct_scan(scan):
     f, plots = plt.subplots(int(scan.shape[0] / 20) + 1, 4, figsize=(25, 25))
@@ -246,18 +241,17 @@ rescaling to 1mm size in all directions. It saved them in the .npz
 format. It also takes the list of nodule locations in that CT Scan as 
 input.
 '''
-def rescale(imagePath):
-        fp = imagePath.split("/")[-1].replace(".mhd","")
-        savePath = "preprocessedData/" + fp + "/"
+def rescale(imagePath,bowl=0):
+	fp = imagePath.split("/")[-1].replace(".mhd","")
+	savePath = "preprocessedData/" + fp + "/"
+	img, origin, spacing = load_itk(imagePath)
         if not os.path.exists(savePath):    
             os.mkdir(savePath)
 
         ##################### LOAD ######################
-        start = time.time()
-	img, origin, spacing = load_itk(imagePath)
-        end = time.time()
 
-        resize_factor = spacing / [1.0, 1.0, 1.0]
+
+        resize_factor = spacing / [RESOLUTION, RESOLUTION, RESOLUTION]
         new_real_shape = img.shape * resize_factor
         new_shape = np.round(new_real_shape)
         real_resize = new_shape / img.shape
@@ -285,7 +279,7 @@ def rescale(imagePath):
             end = time.time()
             print("Segmenting took {0} seconds.".format(end-start))
             sitk.WriteImage(sitk.GetImageFromArray(lung_mask),savePath+"segment.nrrd")
-        segment()
+        #segment()
 
         ##################### DRAW MASKS ######################
         annotations = getAnnotations(imagePath)
@@ -310,7 +304,10 @@ def mkDirs():
             os.mkdir(path)
         
 if __name__ == "__main__":
-    import pdb
+    IMAGE_PATHS = glob.glob("/home/msmith/luna16/subset*/*.mhd")
+    CANDIDATES = pd.read_csv("candidates_V2.csv")
+    ANNOTATIONS = pd.read_csv("annotations.csv")
+
     count = 0
     mkDirs()
     IMAGE_PATHS.sort()
