@@ -227,7 +227,7 @@ def slicer(patientDir):
     for arrNo in range(nCubes):
         wp = sliceDir + "sliced_{0}.bin".format(arrNo)
         scan[arrNo].tofile(wp)
-    paths = glob.glob(sliceDir + "*.bin")
+    paths = glob.glob(sliceDir + "sliced_[0-9].bin")
     paths = [os.path.abspath(path) for path in paths]
     y = ["dummy.bin" for x in paths]
     csv = pd.DataFrame({"x":paths,"y":y})
@@ -242,7 +242,6 @@ def grouper(patientDir):
 
     patientDir += "sliced/"
     nCubes = len(glob.glob(patientDir+"sliced_*_yPred.bin"))
-    pdb.set_trace()
     scan = np.empty((nCubes,IN_SIZE[0],IN_SIZE[1],IN_SIZE[2]))
     for i in xrange(nCubes):
 
@@ -252,17 +251,24 @@ def grouper(patientDir):
 
     scan = np.array(scan)
     scan = cuber.uncubify(scan)
+    mass = scan.sum()
+    mass.tofile(patientDir + "predictedMass.bin")
     sitk.WriteImage(sitk.GetImageFromArray(scan),patientDir + "predicted.nrrd")
 
     # Original image
     orig = sitk.ReadImage(patientDir+"../orig.nrrd")
+
     orig= sitk.GetArrayFromImage(orig)
     desired = np.array(orig.shape)
     difference = desired - np.array(scan.shape)
     difference = difference/2
-    padding = ((difference[0],difference[0]),(difference[1],difference[1]),(difference[2],difference[2]))
-    scanPad = np.pad(scan,padding,"constant")
-    sitk.WriteImage(sitk.GetImageFromArray(scanPad),patientDir + "predictedPad.nrrd")
+    try:
+        padding = ((difference[0],difference[0]),(difference[1],difference[1]),(difference[2],difference[2]))
+        scanPad = np.pad(scan,padding,"constant")
+        sitk.WriteImage(sitk.GetImageFromArray(scanPad),patientDir + "predictedPad.nrrd")
+    except ValueError:
+        print("Couldn't pad this one")
+
 
     #showCrop(scan)
 

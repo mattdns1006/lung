@@ -13,6 +13,7 @@ from paramCount import paramCount
 import SimpleITK as sitk
 from crop import showCrop
 from params import *
+import pdb
 
 def dice3D(Y,YPred):
     smooth = 1.0
@@ -37,9 +38,6 @@ def lossFn(y,yPred,regularization=0,beta=0.00094):
         varSummary(loss,"loss")
     with tf.variable_scope("regLoss"):
         varSummary(regLoss,"regLoss")
-    #with tf.variable_scope("dice"):
-    #    diceScore = tf.reduce_mean(dice3D(yPred,y))
-    #    varSummary(diceScore,"dice")
     return loss, regLoss 
 
 def trainer(lossFn, learningRate):
@@ -61,7 +59,8 @@ def nodes(batchSize,inSize,trainOrTest,initFeats,incFeats,nDown,num_epochs,augme
         num_epochs = 1
     elif trainOrTest == "inference":
         print("INFERRING")
-        csvPath = glob.glob("../preprocessedData/*/sliced/*.csv")[0] 
+        csvPath = glob.glob("../preprocessedData/*/sliced/*.csv")[:300]
+        csvPath.sort()
         print(csvPath)
         num_epochs = 1
         shuffle = 0
@@ -82,8 +81,7 @@ def nodes(batchSize,inSize,trainOrTest,initFeats,incFeats,nDown,num_epochs,augme
     return saver,xPath,X,Y,YPred,loss,is_training,trainOp,learningRate, drop
 
 if __name__ == "__main__":
-    import pdb
-    nEpochs = 3 
+
     flags = tf.app.flags
     FLAGS = flags.FLAGS 
     flags.DEFINE_float("lr",0.001,"Initial learning rate.")

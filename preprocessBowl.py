@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import SimpleITK as sitk
 from params import *
 from crop import slicer,grouper
+from tqdm import tqdm
 
 def load_scan(path):
     slices = [dicom.read_file(path + '/' + s) for s in os.listdir(path)]
@@ -61,26 +62,39 @@ def resample(image, scan, new_spacing=[1,1,1]):
     
     return image, new_spacing
 
+def preprocess(path):
+    first_patient = load_scan(path)
+    first_patient_pixels = get_pixels_hu(first_patient)
+    pix_resampled, spacing = resample(first_patient_pixels, first_patient, [RESOLUTION,RESOLUTION,RESOLUTION])
+    print("Patient --> {0}".format(first_patient))
+    print("Shape before resampling\t", first_patient_pixels.shape)
+    print("Shape after resampling\t", pix_resampled.shape)
+    patient = path.split("/")[-2]
+    wp = "preprocessedData/" + patient + "/"
+    if not os.path.exists(wp):
+        os.mkdir(wp)
+    sitk.WriteImage(sitk.GetImageFromArray(pix_resampled),wp + "orig.nrrd")
+    slicer(wp) # Make CUBES
+
 if __name__ == "__main__":
     BOWL17_DIRS = glob.glob("/home/msmith/kaggle/lung/stage1/*/")
+    BOWL17_DIRS.sort()
     print("Ther are {0} patients in BOWL 17.".format(len(BOWL17_DIRS)))
-    def preprocess(path):
-        first_patient = load_scan(path)
-        first_patient_pixels = get_pixels_hu(first_patient)
-        pix_resampled, spacing = resample(first_patient_pixels, first_patient, [RESOLUTION,RESOLUTION,RESOLUTION])
-        print("Shape before resampling\t", first_patient_pixels.shape)
-        print("Shape after resampling\t", pix_resampled.shape)
-        patient = path.split("/")[-2]
-        wp = "preprocessedData/" + patient + "/"
-        if not os.path.exists(wp):
-            os.mkdir(wp)
-        sitk.WriteImage(sitk.GetImageFromArray(pix_resampled),wp + "orig.nrrd")
-        slicer(wp) # Make CUBES
-
-    for i in xrange(1):
+    prep = 0
+    postPrep = 1
+    count = 0
+    assert prep + postPrep == 1, "Only doing prep or postprep not both"
+    for i in tqdm(xrange(44,len(BOWL17_DIRS))):
         path = BOWL17_DIRS[i]
-        preprocessedPath = "preprocessedData/"+ path.split("/")[-2] + "/"
-        grouper(preprocessedPath)
+        if prep == 1:
+            preprocess(path)
+        elif postPrep == 1:
+            preprocessedPath = "preprocessedData/"+ path.split("/")[-2] + "/"
+            if os.path.exists(preprocessedPath + "sliced/sliced_0_yPred.bin"):
+                print(preprocessedPath)
+                count += 1
+                grouper(preprocessedPath)
+                print(count)
 
 
 

@@ -14,7 +14,7 @@ def getImg(path):
     return v 
 
 def read(csvPath,batchSize=5,num_epochs=1,shuffle=True,augment=0,inference=0):
-    csv = tf.train.string_input_producer([csvPath],num_epochs=num_epochs,shuffle=shuffle)
+    csv = tf.train.string_input_producer(csvPath,num_epochs=num_epochs,shuffle=shuffle)
     reader = tf.TextLineReader(skip_header_lines=1)
     k, v = reader.read(csv)
     defaults = [tf.constant([],dtype = tf.string), 
