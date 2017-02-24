@@ -80,11 +80,11 @@ if __name__ == "__main__":
     BOWL17_DIRS = glob.glob("/home/msmith/kaggle/lung/stage1/*/")
     BOWL17_DIRS.sort()
     print("Ther are {0} patients in BOWL 17.".format(len(BOWL17_DIRS)))
-    prep = 0
-    postPrep = 1
+    prep = 1
+    postPrep = 0
     count = 0
     assert prep + postPrep == 1, "Only doing prep or postprep not both"
-    for i in tqdm(xrange(44,len(BOWL17_DIRS))):
+    for i in tqdm(xrange(len(BOWL17_DIRS))):
         path = BOWL17_DIRS[i]
         if prep == 1:
             preprocess(path)
