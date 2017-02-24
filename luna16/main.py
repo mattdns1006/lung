@@ -45,15 +45,15 @@ def trainer(lossFn, learningRate):
 
 def nodes(batchSize,inSize,trainOrTest,initFeats,incFeats,nDown,num_epochs,augment):
     if trainOrTest == "train":
-        csvPath = "csvs/trainCV.csv"
+        csvPath = ["csvs/trainCV.csv"]
         print("Training on subset.")
         shuffle = True
     elif trainOrTest == "trainAll":
-        csvPath = "csvs/train.csv"
+        csvPath = ["csvs/train.csv"]
         print("Training on all.")
         shuffle = True
     elif trainOrTest == "test":
-        csvPath = "csvs/testCV.csv"
+        csvPath = ["csvs/testCV.csv"]
         print("Testing on validation set")
         shuffle = True
         num_epochs = 1
@@ -164,13 +164,13 @@ if __name__ == "__main__":
                 try:
                     while True:
                         if trTe in ["train","trainAll"]:
-                            _, = sess.run([trainOp],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
+                            _, summary = sess.run([trainOp,merged],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
 
                             if count % 64 == 0:
                                 print("Seen {0} examples".format(count))
-                            if count % 32  == 0:
+                            if count % 128  == 0:
                                 _, summary,x,y,yPred,path = sess.run([trainOp,merged,X,Y,YPred,XPath],feed_dict={is_training:True, drop:FLAGS.drop, learningRate:FLAGS.lr})
-                                trWriter.add_summary(summary,trCount)
+
                                 if count % 32*8 == 0:
                                     for i in xrange(4):
                                         wpX = imgPath +"model_train_x_{0}.nrrd".format(i)
@@ -180,6 +180,7 @@ if __name__ == "__main__":
                                         sitk.WriteImage(sitk.GetImageFromArray(yPred[i]),wpYPred)
                                         sitk.WriteImage(sitk.GetImageFromArray(y[i]),wpY)
 
+                            trWriter.add_summary(summary,trCount)
                             trCount += batchSize
                             count += batchSize
 

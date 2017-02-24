@@ -56,8 +56,8 @@ def read(csvPath,batchSize=5,num_epochs=1,shuffle=True,augment=0,inference=0):
 
 
 if __name__ == "__main__":
-    import pdb
-    X,Y,path = read("csvs/trainCV.csv")
+    import b
+    X,Y,path = read(["csvs/trainCV.csv"])
     with tf.Session() as sess:
         tf.global_variables_initializer().run()
         tf.local_variables_initializer().run()

@@ -54,11 +54,9 @@ def show(img,coords):
 
 def aug(showImgs=0,removePrevious=0):
     if removePrevious == 1:
-        pathsX = glob.glob("preprocessedData/*/aug_x*")
+        pathsX = glob.glob("aug/*")
         for xPath in pathsX:
-            yPath = xPath.replace("_x_","_y_")
             os.remove(xPath)
-            os.remove(yPath)
     def showing():
         if showImgs == 1:
             show(lungs,noduleCoords)
@@ -70,6 +68,9 @@ def aug(showImgs=0,removePrevious=0):
     saveSitk = 0
     getCoords = lambda row: np.array([row.z,row.y,row.x])
     totalCount = 0
+    ext = "bin"
+    count = 0
+
     for patient in tqdm(PATIENTS[:]):
         patientDir = patient.replace("orig.nrrd","")
         csv = pd.read_csv(patient.replace("orig.nrrd","coord.csv"))
@@ -79,7 +80,6 @@ def aug(showImgs=0,removePrevious=0):
         mask = sitk.ReadImage(patient.replace("orig","mask"))
         mask = sitk.GetArrayFromImage(mask)
         dims = np.array(lungs.shape)
-        count = 0
 
         # For every nodule make another file pair with no nodule in it (balanced)
         minRange = np.array([0,0,0]) + cropSize
@@ -87,8 +87,7 @@ def aug(showImgs=0,removePrevious=0):
         noNodule = False
         #showing()
 
-
-        for n in xrange(30): # make lots of data...
+        for n in tqdm(xrange(30)): # make lots of data...
 
             # Nodule data 
             for nodule in xrange(nNodules):
@@ -108,16 +107,15 @@ def aug(showImgs=0,removePrevious=0):
 
                 lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
                 maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
-                wpX = patientDir + "aug_x_{0}.bin".format(count)
-                wpY = patientDir + "aug_y_{0}.bin".format(count)
-                lungsCrop.tofile(wpX)
-                maskCrop.tofile(wpY)
+                wpX = "aug/x_{0}.{1}".format(count,ext)
+                wpY = "aug/y_{0}.{1}".format(count,ext)
                 count += 1
-                if saveSitk == True:
-                    wpX = patientDir + "aug_x_{0}.nrrd".format(count)
-                    wpY = patientDir + "aug_y_{0}.nrrd".format(count)
+                if ext == "nrrd":
                     sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
                     sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
+                else:
+                    lungsCrop.tofile(wpX)
+                    maskCrop.tofile(wpY)
                 #showCrop(lungsCrop)
                 #showCrop(maskCrop)
 
@@ -132,16 +130,16 @@ def aug(showImgs=0,removePrevious=0):
                 lungsCrop = lungs[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
                 maskCrop = mask[start[0]:end[0],start[1]:end[1],start[2]:end[2]]
 
-                wpX = patientDir + "aug_x_{0}.bin".format(count)
-                wpY = patientDir + "aug_y_{0}.bin".format(count)
-                lungsCrop.tofile(wpX)
-                maskCrop.tofile(wpY)
+                wpX = "aug/x_{0}.{1}".format(count,ext)
+                wpY = "aug/y_{0}.{1}".format(count,ext)
                 count += 1
-                if saveSitk == True:
-                    wpX = patientDir + "aug_x_{0}.nrrd".format(count)
-                    wpY = patientDir + "aug_y_{0}.nrrd".format(count)
+                if ext == "nrrd":
                     sitk.WriteImage(sitk.GetImageFromArray(lungsCrop),wpX)
                     sitk.WriteImage(sitk.GetImageFromArray(maskCrop),wpY)
+                else:
+                    lungsCrop.tofile(wpX)
+                    maskCrop.tofile(wpY)
+
 
 
 def makeCsvs():
@@ -149,9 +147,9 @@ def makeCsvs():
     if not os.path.exists(directory):
         os.mkdir(directory)
     clean()
-    pathsX = glob.glob("preprocessedData/*/aug_x*")
+    pathsX = glob.glob("aug/x_*")
     pathsX.sort()
-    pathsY = [x.replace("_x","_y") for x in pathsX] 
+    pathsY = [x.replace("x_","y_") for x in pathsX] 
     df = pd.DataFrame({"x":pathsX,"y":pathsY})
     os.chdir(directory)
 
@@ -164,6 +162,7 @@ def makeCsvs():
     test = df.ix[split:]
     train.to_csv("trainCV.csv",index=0)
     test.to_csv("testCV.csv",index=0)
+
     print("CSVs made with train/test shapes = {0}/{1}".format(train.shape,test.shape))
 
 
@@ -171,14 +170,13 @@ def makeCsvs():
     df.to_csv("train.csv",index=0)
 
 
-
 def clean():
     # Make sure all files are same size
-    pathsX = glob.glob("preprocessedData/*/aug_x*")
-    pathsY = [x.replace("_x","_y") for x in pathsX] 
-    pathsToRemove = [x for x in pathsX if os.path.getsize(x) != 524288]
+    pathsX = glob.glob("aug/x_*")
+    pathsY = [x.replace("x_","y_") for x in pathsX] 
+    pathsToRemove = [x for x in pathsX if os.path.getsize(x) not in [524288,524584]]
     for xPath in pathsToRemove:
-        yPath = xPath.replace("_x_","_y_")
+        yPath = xPath.replace("x_","y_")
         os.remove(xPath)
         os.remove(yPath)
         print("Removed {0}.".format(xPath))
@@ -197,7 +195,6 @@ def slicer(patientDir):
     multiple = 4
     desired = np.multiply(IN_SIZE,multiple) 
     newshape = np.array(IN_SIZE)
-
     cuber = Cubify(oldshape=desired,newshape=newshape)
     
 
@@ -276,13 +273,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--show",type=bool,help="show images")
     args = parser.parse_args()
-    #aug(args.show,removePrevious=0)
-    #clean()
-    #makeCsvs()
+    aug(args.show,removePrevious=1)
+    makeCsvs()
     patientDir = PATIENTS[2].replace("orig.nrrd","")
-    print(patientDir)
+    #print(patientDir)
     #slicer(patientDir)
-    grouper(patientDir)
+    #grouper(patientDir)
 
 
 
