@@ -1,0 +1,129 @@
+\documentclass[11pt]{beamer}
+\usetheme{Warsaw}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+%\author{}
+%\title{}
+%\setbeamercovered{transparent} 
+%\setbeamertemplate{navigation symbols}{} 
+%\logo{} 
+%\institute{} 
+%\date{} 
+%\subject{} 
+\begin{document}
+
+%\begin{frame}
+%\titlepage
+%\end{frame}
+
+%\begin{frame}
+%\tableofcontents
+%\end{frame}
+
+\title{Lung nodule analysis using deep learning}
+\author{Matt Smith}
+\institute{University of Warwick}
+\date{\today}
+
+
+\begin{frame}
+\frametitle{Outline}
+\tableofcontents
+\end{frame}
+
+\section{Section 1}
+\subsection{Background}
+\begin{frame}
+\frametitle{Background}
+\begin{itemize}
+\item Lung cancer is the second-most common type of cancer and the leading cause of cancer death in the United States \cite{acs}.
+\item  Computed tomography images (CT) are used in radiotherapy which contrast soft and hard tissues to allow precise target delineation of candidate nodules.
+\item  Computer-Aided Detection (CAD) systems aid radiologists by performing a nodule detection pass.
+\begin{itemize}
+\item Large number of false positives.
+\item Not 100\% sensitive.
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\subsection{Deep learning}
+\begin{frame}
+\frametitle{Deep learning}
+\begin{itemize}
+
+\item Deep learning (Artificial Neural Networks) are function approximators.
+\item Model highly complex relationships between inputs and outputs with great results.
+\begin{itemize}
+\item Requires lots of data.
+\item Hard to train/generalize.
+\end{itemize}
+
+\end{itemize}
+\begin{itemize}
+\item Large number of applications in multiple industries.
+\end{itemize}
+\end{frame}
+
+\subsection{Convolutional Neural Networks}
+\begin{frame}
+\frametitle{Convolutional Neural Networks (CNNs)}
+\begin{itemize}
+\item Deep learning algorithms have two main subsets; 
+\begin{itemize}
+\item Recurrent
+\begin{itemize}
+\item Have internal memory and modelling sequences.
+\end{itemize}
+\item Convolutional
+\begin{itemize}
+\item Highly effective with temporal, spatial or volumetric patterns.
+\end{itemize}
+\end{itemize}
+
+\item Motivation for lung nodule analysis:
+\begin{itemize}
+\item 2D CNNs are state of the art in computer vision problems.
+\item 3D CNN infrastructure is being laid down in machine learning libraries e.g. Torch, Tensorflow, Theano.
+\item Lots of 3D CT scan data available.
+\item Computational power improvements.
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\section{Section 2}
+\subsection{Data}
+\begin{frame}
+\frametitle{LUNA16 (Lung nodule analysis 2016)}
+\begin{itemize}
+\item 888 CT patient scans.
+
+\begin{itemize}
+\item Computer aided diagnosis algorithms generate candidates with $x,y,z$ coordinates.
+\begin{itemize}
+\item 754,975 candidates across scans.
+\item 1,557 true positive nodules.
+\item 753,418 false positive nodules.
+\item 500:1 FP:TP ratio.
+\item 1,186 true positives have a diameter included.
+\end{itemize}
+\end{itemize}
+\end{itemize}
+\begin{center}
+\includegraphics[scale=0.25]{../noduleDiameter.jpg}
+\end{center}
+
+\end{frame}
+\begin{frame}
+\begin{center}
+\includegraphics[scale=0.5]{../lung.png}
+\end{center}
+
+
+\end{frame}
+
+
+
+\end{document}

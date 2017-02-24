@@ -9,7 +9,6 @@
 \begin{document}
 
 \title{Lung Nodule Analysis}
-\maketitles
 
 \subsection{Introduction}
 
@@ -27,6 +26,8 @@ Furthermore these 2-D networks are normally pretrained on non medical image task
 3-D CNNs can be used to capitalize on volumetric features of nodules. Air tracts for exampe, are hard to differentiate with nodules in 2-D yet easier in 3-D and hence are currently a primary cause for false positives \cite{anirudh2016lung}. To the best of our knowledge they have only recently been shown to work well in false positive reduction by \cite{dou2016multi}.
 
 Whilst it is useful to classify nodules it is also of interest for medical practitioners to localize nodules, for example creating a bounding cube around the localized region.
+
+Training using dice score as loss function as opposed to mse. Possibly can show that convergence is better.
 
 \section{Classification}
 
